@@ -157,7 +157,7 @@ if(FORMAL_VERIF && WB_PIPESTAGE) { withReset(rst1) {
   val mem_req_hsked  = BoringUtils.bore(core.lsu.io.out.req.valid) && BoringUtils.bore(core.lsu.io.out.req.ready)
   val mem_rsp_hsked  = BoringUtils.bore(core.lsu.io.out.rsp.valid) && BoringUtils.bore(core.lsu.io.out.rsp.ready)
 
-  val mem_addr_n     = Mux(dx_mem_req, dx_mem_addr, 0.U)
+  val mem_addr_n     = Mux(dx_mem_req, Cat(dx_mem_addr(31, 2), 0.U(2.W)), 0.U)
   val mem_rmask_n    = Mux(dx_mem_req & ~dx_mem_wen, dx_mem_mask, 0.U)
   val mem_wmask_n    = Mux(dx_mem_req & dx_mem_wen, dx_mem_mask, 0.U)
   val mem_wdata_n    = Mux(dx_mem_req & dx_mem_wen, dx_mem_wdata, 0.U)
