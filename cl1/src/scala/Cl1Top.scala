@@ -177,7 +177,8 @@ if(FORMAL_VERIF && WB_PIPESTAGE) { withReset(rst1) {
   val excp_flush_pc   = BoringUtils.bore(core.excp.flush_pc)
   val excp_flush_ofst = BoringUtils.bore(core.excp.flush_ofst)
   val mret_taken      = BoringUtils.bore(core.excp.cmt_mret_en)
-  val trap_target_pc  = excp_flush_pc + excp_flush_ofst
+  val cur_excp_mtvec  = BoringUtils.bore(core.csr.mtvec)
+  val trap_target_pc  = Mux(trap, Cat(cur_excp_mtvec(31, 2), 0.U(2.W)), excp_flush_pc + excp_flush_ofst)
 
   val dbg_flush  = BoringUtils.bore(core.dm.io.dbg_flush)
   chisel3.assume(!dbg_flush)
