@@ -71,7 +71,7 @@ VCC       ?= vcs
 WAVE      ?= gtkwave
 
 # Phony Targets
-.PHONY: all verilog verilog-sim verilog-native verilog-axi-cache help reformat checkformat clean run
+.PHONY: all verilog verilog-sim verilog-native verilog-axi-cache verilog-no-rvfi verilog-no-rvfi-no-cache help reformat checkformat clean run
 
 # Generate Verilog
 FIRTOOL_VERSION = 1.105.0
@@ -103,6 +103,12 @@ verilog-native:
 
 verilog-axi-cache:
 	$(call gen_verilog,CL1_TOP_NAME=Cl1Top_AXI CL1_EXPOSE_CORE_BUS=false CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false CL1_FORMAL_CACHE_IDXW=1,Cl1Top_AXI)
+
+verilog-no-rvfi:
+	$(call gen_verilog,CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=false CL1_EXPOSE_CORE_BUS=false CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false,Cl1Top)
+
+verilog-no-rvfi-no-cache:
+	$(call gen_verilog,CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=false CL1_EXPOSE_CORE_BUS=false CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top)
 	
 # Show Help for Elaborate
 help:
