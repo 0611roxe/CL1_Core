@@ -451,9 +451,7 @@ class Cl2Decoder extends Module {
 
   val decodeTable  = new DecodeTable(Cl2DecodeInfo.possiblePatterns, Cl2DecodeInfo.allFields)
   val decodeResult = decodeTable.decode(io.inst)
-  val illegal      = decodeResult(IllegalField)
 
-  //TODO: use an elegant way to get decoder output
   io.out.immType := decodeResult(ImmSelField)
   io.out.aluOp   := decodeResult(AluOpField)
   io.out.aSel    := decodeResult(AselField)
@@ -464,7 +462,7 @@ class Cl2Decoder extends Module {
   io.out.wbWen   := decodeResult(WenField)
   io.out.csrType := decodeResult(CSRField)
   io.out.muldivOp  := decodeResult(MDField)
-  io.out.illegal := illegal
+  io.out.illegal := decodeResult(IllegalField)
   io.out.fencei  := decodeResult(FenceiField)
 
 
