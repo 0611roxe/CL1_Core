@@ -44,6 +44,7 @@ class FetchAlign extends Module {
     val bus_rsp_rdy   = Wire(Bool())
     val bus_rsp_hsked = bus_rsp_vld & bus_rsp_rdy
     val bus_rsp_dat   = memResp.bits.data
+    val bus_rsp_err   = memResp.bits.err
 
     val pc_unalign32    = ifu_req_pc_r(1) === true.B
     val pc_align32      = ~pc_unalign32
@@ -65,7 +66,7 @@ class FetchAlign extends Module {
     val rspl_is_16i         = bus_rsp_dat(1,0) =/= "b11".U
     val rsph_is_32i         = bus_rsp_dat(17,16) === "b11".U
 
-    val ir_buf_vld_set      = (pc_align32 & rspl_is_16i | pc_unalign32) & rsph_is_32i
+    val ir_buf_vld_set      = !bus_rsp_err & (pc_align32 & rspl_is_16i | pc_unalign32) & rsph_is_32i
     val ir_buf_vld_clr      = ~ifu_req_seq
     val ir_buf_vld_n        = ir_buf_vld_set & ~ir_buf_vld_clr & bus_rsp_hsked
     val ir_buf_vld          = RegEnable(ir_buf_vld_n, false.B, bus_rsp_hsked)
@@ -75,7 +76,7 @@ class FetchAlign extends Module {
     val ir_buf              = RegEnable(ir_buf_n, 0.U, ir_buf_en)
 
     val ifu_req_seq_r       = RegEnable(ifu_req_seq, false.B, ifu_req_hsked)
-    val need_2st_fetch      = bus_rsp_vld & pc_unalign32 & rsph_is_32i & ~ifu_req_seq_r
+    val need_2st_fetch      = bus_rsp_vld & !bus_rsp_err & pc_unalign32 & rsph_is_32i & ~ifu_req_seq_r
 
     switch(fetch_st) {
         is(idle) {
@@ -134,7 +135,7 @@ class FetchAlign extends Module {
     io.fromifu.ready    := ifu_req_rdy
     io.toifu.valid      := ifu_rsp_vld
     io.toifu.bits.inst  := rsp_inst
-    io.toifu.bits.err   := 0.U
+    io.toifu.bits.err   := bus_rsp_err
 
     memReq.valid             := bus_req_vld
     memReq.bits.addr         := bus_fetch_addr

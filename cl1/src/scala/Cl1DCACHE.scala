@@ -396,6 +396,7 @@ class Cl1DCACHE extends Module {
 
     val wbHit_way            = Cat(wb_hit_seq_r.reverse)
     val wait_prewrite        = ~RegNext(wb_is_write & (wb_ofst_r === 0.U) & (replace_way & wbHit_way).orR , false.B)
+    io.out.req.bits         := 0.U.asTypeOf(io.out.req.bits)
     io.out.req.valid        := s_is_miss & wait_prewrite | s_is_replace | clean_wr
     io.out.req.bits.addr    := Mux1H(Seq(
         (s_is_miss & single_trans  )    -> single_addr, 
@@ -410,6 +411,7 @@ class Cl1DCACHE extends Module {
         s_is_wr_dirtyline               -> cleandata_out
     ))
     io.out.req.bits.wen     := s_is_miss | s_is_wr_dirtyline
+    io.out.req.bits.instr   := false.B
     io.out.req.bits.burst   := burst_trans | s_is_wr_dirtyline
     io.out.req.bits.mask    := Mux(dcacheable  | s_is_wr_dirtyline, Fill(CacheParams.DW/8, true.B), wdat_mask_r)
     io.out.req.bits.len     := Mux(burst_trans | s_is_wr_dirtyline, (CacheParams.BANKS - 1).U, 0.U)

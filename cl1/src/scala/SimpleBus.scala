@@ -86,6 +86,7 @@ class CoreBus2CacheBus extends Module {
     io.out.req.bits.addr  := io.in.req.bits.addr
     io.out.req.bits.data  := io.in.req.bits.data
     io.out.req.bits.wen   := io.in.req.bits.wen
+    io.out.req.bits.instr := false.B
     io.out.req.bits.burst := false.B
     io.out.req.bits.mask  := io.in.req.bits.mask
     io.out.req.bits.len   := 0.U

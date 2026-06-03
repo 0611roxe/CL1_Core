@@ -95,6 +95,7 @@ PLATFORMS: dict[str, Platform] = {
         ),
         selftest_regions=(
             SimRegion("test_region", 0x60000000, 0x00000004, "rw-"),
+            SimRegion("fetch_fault_region", 0x60000000, 0x00000004, "rw-"),
         ),
     ),
     "full_soc": Platform(

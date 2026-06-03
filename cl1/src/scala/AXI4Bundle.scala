@@ -107,7 +107,7 @@ class SimpleBus2Axi4 extends Module {
     val rsp_w              = RegEnable(io.in.req.bits.wen, false.B, io.in.req.fire)
 
     io.in.rsp.valid        := Mux(rsp_w, io.out.b.valid, io.out.r.valid)
-    io.in.rsp.bits.err     := Mux(rsp_w, io.out.b.bits.bresp, io.out.r.bits.rresp)
+    io.in.rsp.bits.err     := Mux(rsp_w, io.out.b.bits.bresp =/= 0.U, io.out.r.bits.rresp =/= 0.U)
     io.in.rsp.bits.rdata   := io.out.r.bits.rdata
 
     io.out.b.ready         := io.in.rsp.ready & rsp_w
@@ -159,7 +159,7 @@ class CacheBus2Axi4 extends Module {
     io.out.ar.bits.arburst  := AXIValue.AX_INCR
     io.out.ar.bits.arlock   := 0.U
     io.out.ar.bits.arcache  := 0.U
-    io.out.ar.bits.arprot   := 0.U
+    io.out.ar.bits.arprot   := Cat(srcBits.instr, 0.U(2.W))
 
     val awLeft             = srcValid & needAw & ~io.out.aw.fire
     val wLeft              = srcValid & needW & ~io.out.w.fire
@@ -192,7 +192,7 @@ class CacheBus2Axi4 extends Module {
       rsp_w := io.in.req.bits.wen
     }
     io.in.rsp.valid         := Mux(rsp_w, io.out.b.valid, io.out.r.valid)
-    io.in.rsp.bits.err      := Mux(rsp_w, io.out.b.bits.bresp, io.out.r.bits.rresp)
+    io.in.rsp.bits.err      := Mux(rsp_w, io.out.b.bits.bresp =/= 0.U, io.out.r.bits.rresp =/= 0.U)
     io.in.rsp.bits.data     := io.out.r.bits.rdata
     io.in.rsp.bits.last     := io.out.r.bits.rlast | io.out.b.fire
 

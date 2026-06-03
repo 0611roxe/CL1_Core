@@ -371,10 +371,7 @@ bool MemoryModel::read_word(uint32_t aligned_addr, uint8_t mask, uint32_t& data,
   const MemoryAccessKind access_kind = is_fetch ? MemoryAccessKind::kFetch : MemoryAccessKind::kRead;
 
   if (!are_masked_bytes_accessible(aligned_addr, effective_mask, access_kind)) {
-    if (is_fetch) {
-      stop.kind = StopKind::kFail;
-      stop.reason = "instruction read from unmapped address " + hex32(aligned_addr);
-    }
+    (void)stop;
     return false;
   }
 
