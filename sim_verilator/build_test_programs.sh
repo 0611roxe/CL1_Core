@@ -2,18 +2,20 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-ROOT_DIR=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 SELFTEST_DIR="${SCRIPT_DIR}/selftest"
 BUILD_DIR="${SELFTEST_DIR}/build"
 CORE_CASE_DIR="${BUILD_DIR}/core_cases"
 HARNESS_CASE_DIR="${BUILD_DIR}/harness_cases"
 NEG_DIR="${BUILD_DIR}/negative_cases"
-NIX_HELPER="${SCRIPT_DIR}/nix_env.sh"
 
-maybe_source_nix_env() {
-  # shellcheck disable=SC1090
-  source "${NIX_HELPER}"
-  sim_verilator_source_nix_env "${ROOT_DIR}" "[selftest]" riscv32-none-elf-gcc riscv32-none-elf-objcopy python3
+require_tools() {
+  local tool
+  for tool in "$@"; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+      echo "[selftest] error: missing required tool '${tool}'; enable direnv or run nix develop first" >&2
+      exit 1
+    fi
+  done
 }
 
 bin_to_hex() {
@@ -139,7 +141,7 @@ main() {
   local src name
   declare -A seen_names=()
 
-  maybe_source_nix_env
+  require_tools riscv32-none-elf-gcc riscv32-none-elf-objcopy riscv32-none-elf-objdump python3
 
   mkdir -p "${BUILD_DIR}"
 
