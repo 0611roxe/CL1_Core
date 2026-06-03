@@ -48,6 +48,7 @@ build_sim() {
     "${SCRIPT_DIR}/random_irq.cpp"
     "${SCRIPT_DIR}/options.cpp"
     "${SCRIPT_DIR}/memory_model.cpp"
+    "${SCRIPT_DIR}/axi_slave_model.cpp"
     "${SCRIPT_DIR}/simulator.cpp"
   )
   verilator \
