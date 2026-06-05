@@ -17,6 +17,18 @@ class DecoderTest extends AnyFreeSpec with ChiselScalatestTester {
       dut.io.out.csrType.expect(CSR_P)
       dut.io.out.illegal.expect(false.B)
 
+      dut.io.inst.poke("h0ff0000f".U(32.W))
+      dut.io.out.fencei.expect(false.B)
+      dut.io.out.illegal.expect(false.B)
+
+      dut.io.inst.poke("h0000000f".U(32.W))
+      dut.io.out.fencei.expect(false.B)
+      dut.io.out.illegal.expect(false.B)
+
+      dut.io.inst.poke("h0000100f".U(32.W))
+      dut.io.out.fencei.expect(true.B)
+      dut.io.out.illegal.expect(false.B)
+
       dut.io.inst.poke("hffffffff".U(32.W))
       dut.io.out.illegal.expect(true.B)
     }
@@ -85,6 +97,8 @@ class EXCPIllegalInstructionTest extends AnyFreeSpec with ChiselScalatestTester 
       dut.io.ext_irq.poke(false.B)
       dut.io.sft_irq.poke(false.B)
       dut.io.tmr_irq.poke(false.B)
+      dut.io.next_pc.poke(0.U)
+      dut.io.dx_valid.poke(false.B)
       dut.io.ifu_halt_ack.poke(true.B)
       dut.io.dxu_halt_ack.poke(true.B)
       dut.io.icache_idle.poke(true.B)
@@ -95,6 +109,7 @@ class EXCPIllegalInstructionTest extends AnyFreeSpec with ChiselScalatestTester 
       dut.io.excp2Csr.mtie.poke(false.B)
       dut.io.excp2Csr.mie.poke(false.B)
       dut.io.excp2Csr.mepc.poke(0.U)
+      dut.io.excp2Csr.mcause.poke(0.U)
       dut.io.excp2Csr.mtvec.poke("h20000000".U)
 
       dut.io.dbg2excp.debug_mode.poke(false.B)
@@ -107,9 +122,11 @@ class EXCPIllegalInstructionTest extends AnyFreeSpec with ChiselScalatestTester 
       dut.io.wb2Excp.cmt_wfi.poke(false.B)
       dut.io.wb2Excp.wb_valid.poke(true.B)
       dut.io.wb2Excp.wb_pc.poke("h80000020".U)
-      dut.io.wb2Excp.memNoOutStanding.poke(true.B)
       dut.io.wb2Excp.excp_valid.poke(true.B)
       dut.io.wb2Excp.excp_code.poke(2.U)
+      dut.io.wb2Excp.excp_tval.poke(0.U)
+
+      dut.clock.step()
 
       dut.io.flush.expect(true.B)
       dut.io.flush_pc.expect("h20000000".U)

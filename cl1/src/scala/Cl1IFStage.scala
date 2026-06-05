@@ -41,7 +41,6 @@ class Cl1IFStage extends Module {
   })
 
   val aligner         = BypReg(io.fromaligner)
-  val rsp_pc          = aligner.bits.rsp_pc
 
   val excp_flush      = io.flush
   val excp_flush_pc   = io.flush_pc
@@ -87,13 +86,14 @@ class Cl1IFStage extends Module {
   val flush_real  = Wire(Bool())
   val ifu_req_valid   = Wire(Bool())
   val ifu_new_req     = ~ifu_halt & ~ifu_stall & ~reset_flag_r
-  val ifu_req_pending = RegNext(ifu_req_valid & ~ifu_req_ready, false.B)
+  val ifu_req_pending_n = ifu_req_valid & ~ifu_req_ready
+  val ifu_req_pending = RegNext(ifu_req_pending_n, false.B)
   val ifu_req         = ifu_new_req | ifu_req_pending | reset_req_r | bpu_redirect_req | flush_real
 
-  val redirect_rsp_hsked = Wire(Bool())
+  val redirect_req_hsked = Wire(Bool())
   val flush_pending     = Wire(Bool())
-  val flush_pending_set   = flush_pluse & (ifu_req_pending | ifu_out_r & ~ifu_out_clr) & ~flush_pending
-  val flush_pending_clr   = redirect_rsp_hsked
+  val flush_pending_set   = flush_pluse & (ifu_req_pending_n | ifu_req_pending | ifu_out_r & ~ifu_out_clr) & ~flush_pending
+  val flush_pending_clr   = redirect_req_hsked
   val flush_pending_en    = flush_pending_set | flush_pending_clr
   val flush_pending_n     = flush_pending_set | ~flush_pending_clr
   flush_pending         := RegEnable(flush_pending_n, false.B, flush_pending_en)
@@ -131,9 +131,9 @@ class Cl1IFStage extends Module {
   val pc_en         = req_hsked | flush_pluse
   pc_r              := RegEnable(pc_n, 0.U(32.W), pc_en)
 
-  val flush_pending_pc = pc_r
-  redirect_rsp_hsked := (rsp_pc === flush_pending_pc) & flush_pending & rsp_hsked
-
+  val flush_target_pc = Mux(flush_pluse, pc_n, pc_r)
+  redirect_req_hsked := (fetch_pc === flush_target_pc) & flush_pending & req_hsked
+  val rsp_pc         = pc_r
 
   val ir_o_rdy      = io.pplOut.ready
   val ifu_rsp_ready = Mux(kill_old_rsp, true.B, ir_o_rdy & ifu_req_ready & !ifu_stall)
