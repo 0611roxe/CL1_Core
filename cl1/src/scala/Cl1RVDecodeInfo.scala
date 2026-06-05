@@ -60,7 +60,8 @@ object Cl2DecodeInfo {
     InstructionPattern(instType = "CSR", name = "csrrwi", func3 = BitPat("b101"), opcode = BitPat("b1110011")),
     InstructionPattern(instType = "CSR", name = "csrrsi", func3 = BitPat("b110"), opcode = BitPat("b1110011")),
     InstructionPattern(instType = "CSR", name = "csrrci", func3 = BitPat("b111"), opcode = BitPat("b1110011")),
-    InstructionPattern(instType = "R", name = "fence",func3 = BitPat("b001"), opcode = BitPat("b0001111")),                    // FENCE
+    InstructionPattern(instType = "R", name = "fence",   func3 = BitPat("b000"), opcode = BitPat("b0001111")), // FENCE
+    InstructionPattern(instType = "R", name = "fence.i", func3 = BitPat("b001"), opcode = BitPat("b0001111")), // FENCE.I
     InstructionPattern(instType = "PRIV", name = "ecall/ebreak", func3 = BitPat("b000"), opcode = BitPat("b1110011")) //  ECALL/EBREAK
 
   )
