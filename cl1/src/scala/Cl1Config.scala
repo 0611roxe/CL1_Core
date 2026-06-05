@@ -83,8 +83,8 @@ object Cl1Config {
   val SOC_D64      = if(globalConfig.fullSocTest) true else false
   val Technology   = "SMIC110"
 
-  val FORMAL_VERIF = Cl1BuildMode.bool("CL1_FORMAL_VERIF", true)
-  val RISCV_FORMAL_ALTOPS = Cl1BuildMode.bool("CL1_RISCV_FORMAL_ALTOPS", true)
+  val FORMAL_VERIF = Cl1BuildMode.bool("CL1_FORMAL_VERIF", false)
+  val RISCV_FORMAL_ALTOPS = Cl1BuildMode.bool("CL1_RISCV_FORMAL_ALTOPS", false)
   val EXPOSE_CORE_BUS = Cl1BuildMode.bool("CL1_EXPOSE_CORE_BUS", !Cl1BuildMode.CACHE_MODE)
   val FORMAL_CACHE_IDXW = Cl1BuildMode.int("CL1_FORMAL_CACHE_IDXW", 7)
 

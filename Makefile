@@ -8,7 +8,7 @@ VSRC_DIR  := ./vsrc
 CPUTOP    := Cl1Top
 DUMP_WAVE :=
 PWR_ANALYSIS :=1
-CL1_TEST_MODE ?= bus
+CL1_TEST_MODE ?= cache
 CL1_PLATFORM ?= simple_soc
 
 CONFIG_DBG = n
@@ -71,7 +71,8 @@ VCC       ?= vcs
 WAVE      ?= gtkwave
 
 # Phony Targets
-.PHONY: all verilog verilog-sim verilog-native verilog-axi-cache verilog-no-rvfi verilog-no-rvfi-no-cache help reformat checkformat clean run
+.DEFAULT_GOAL := verilog
+.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache help reformat checkformat clean run
 
 # Generate Verilog
 FIRTOOL_VERSION = 1.105.0
@@ -96,20 +97,30 @@ define gen_verilog
 	sed -i '/Stat\.v/d' $(VSRC_DIR)/$(2).sv
 endef
 
-verilog: verilog-native
+all: verilog
 
-verilog-native:
-	$(call gen_verilog,CL1_TOP_NAME=Cl1Top CL1_EXPOSE_CORE_BUS=true,Cl1Top)
+# Default/full core: ICache + DCache, AXI master interface, normal MDU.
+verilog: verilog-full-cache-axi
 
-verilog-axi-cache:
-	$(call gen_verilog,CL1_TOP_NAME=Cl1Top_AXI CL1_EXPOSE_CORE_BUS=false CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false CL1_FORMAL_CACHE_IDXW=1,Cl1Top_AXI)
+verilog-full-cache-axi:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false,Cl1Top)
 
-verilog-no-rvfi:
-	$(call gen_verilog,CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=false CL1_EXPOSE_CORE_BUS=false CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false,Cl1Top)
+# AXI master interface, normal MDU, no ICache/DCache.
+verilog-no-cache:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_NoCache CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_NoCache)
 
-verilog-no-rvfi-no-cache:
-	$(call gen_verilog,CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=false CL1_EXPOSE_CORE_BUS=false CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top)
-	
+# RVFI with riscv-formal M-extension alternative ops, CoreBus exposed, no cache.
+verilog-rvfi:
+	$(call gen_verilog,CL1_TEST_MODE=bus CL1_TOP_NAME=Cl1Top_RVFI CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_EXPOSE_CORE_BUS=true CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_RVFI)
+
+# RVFI with riscv-formal M-extension alternative ops, AXI exposed, no cache.
+verilog-rvfi-axi:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_AXI CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_RVFI_AXI)
+
+# RVFI with riscv-formal M-extension alternative ops, AXI exposed, minimal cache.
+verilog-rvfi-cache:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false CL1_FORMAL_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
+
 # Show Help for Elaborate
 help:
 	@echo "Displaying help for Elaborate..."
