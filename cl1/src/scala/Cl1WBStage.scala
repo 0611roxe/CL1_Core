@@ -61,7 +61,7 @@ class Cl1WBStage extends Module with TrapCode {
   val is_c_instr = pplIn.isCInst
   val rdata    = io.mem.bits.rdata
 
-  val wb_wfi      = pplIn.privInstr(4)
+  val wb_wfi      = false.B
   val wb_ecall    = pplIn.privInstr(3)
   val wb_ebreak   = pplIn.privInstr(2)
   val wb_mret     = pplIn.privInstr(1)
