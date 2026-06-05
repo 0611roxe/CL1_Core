@@ -134,8 +134,7 @@ class CacheBus2Axi4 extends Module {
     val needAw             = Mux(reqBufValid, pendAw, io.in.req.bits.wen & ~writeBurstActive)
     val needW              = Mux(reqBufValid, pendW, io.in.req.bits.wen)
     val needAr             = Mux(reqBufValid, pendAr, ~io.in.req.bits.wen)
-    val byteOffset         = PriorityEncoder(srcBits.mask)
-    val axiAddr            = srcBits.addr | byteOffset
+    val axiAddr            = srcBits.addr
 
     io.out.aw.valid         := srcValid & needAw
     io.out.aw.bits.awaddr   := axiAddr
