@@ -1207,11 +1207,19 @@ def core_checks(binary: Path, platform: Platform, max_cycles: int) -> list[Check
 def interrupt_checks(binary: Path, max_cycles: int) -> list[CheckResult]:
     results: list[CheckResult] = []
     interrupt_cases = [
-        ("interrupt-external", "interrupt_external_pass", "ext", "11"),
-        ("interrupt-software", "interrupt_software_pass", "sft", "12"),
-        ("interrupt-timer", "interrupt_timer_pass", "tmr", "13"),
+        ("interrupt-external", "interrupt_external_pass", "ext", "11", "1:16", "8:8"),
+        ("interrupt-software", "interrupt_software_pass", "sft", "12", "1:16", "8:8"),
+        ("interrupt-timer", "interrupt_timer_pass", "tmr", "13", "1:16", "8:8"),
+        ("interrupt-global-mask", "interrupt_global_mask_pass", "sft", "21", "1:16", "8:8"),
+        ("interrupt-mie-mask", "interrupt_mie_mask_pass", "sft", "22", "1:16", "8:8"),
+        ("interrupt-pending-enable", "interrupt_pending_enable_pass", "sft", "23", "1:16", "64:64"),
+        ("interrupt-mret-status", "interrupt_mret_status_pass", "sft", "24", "1:16", "64:64"),
+        ("interrupt-priority", "interrupt_priority_pass", "all", "25", "1:16", "24:24"),
+        ("interrupt-vectored-software", "interrupt_vectored_software_pass", "sft", "26", "1:16", "8:8"),
+        ("interrupt-short-pulse-drop", "interrupt_short_pulse_drop_pass", "sft", "27", "1:1", "1:1"),
+        ("interrupt-exception-priority", "interrupt_exception_priority_pass", "sft", "28", "1:16", "128:128"),
     ]
-    for test_name, artifact_name, irq_line, seed in interrupt_cases:
+    for test_name, artifact_name, irq_line, seed, delay, width in interrupt_cases:
         results.append(
             run_checked_command(
                 name=test_name,
@@ -1223,9 +1231,9 @@ def interrupt_checks(binary: Path, max_cycles: int) -> list[CheckResult]:
                     "--irq-seed",
                     seed,
                     "--irq-delay",
-                    "1:16",
+                    delay,
                     "--irq-width",
-                    "2:4",
+                    width,
                     "--max-cycles",
                     str(max_cycles),
                     str(selftest_artifact(artifact_name, "elf")),
