@@ -106,6 +106,9 @@ object PlatformAddressMaps {
       "ram" -> "sdram",
       "load" -> "isram",
       "uart" -> "uart",
+      "uart2" -> "uart2",
+      "dma" -> "dma_reg",
+      "sdio" -> "sdio",
       "debug" -> "debug"
     ),
     regions = Seq(
@@ -119,7 +122,7 @@ object PlatformAddressMaps {
       AddressRegion(
         name = "dsram",
         base = BigInt("01800000", 16),
-        size = BigInt("00004000", 16),
+        size = BigInt("00040000", 16),
         dCacheable = true
       ),
       AddressRegion(
@@ -187,6 +190,24 @@ object PlatformAddressMaps {
       AddressRegion(
         name = "i2c",
         base = BigInt("10030000", 16),
+        size = BigInt("00001000", 16),
+        mmio = true
+      ),
+      AddressRegion(
+        name = "dma_reg",
+        base = BigInt("11000000", 16),
+        size = BigInt("00001000", 16),
+        mmio = true
+      ),
+      AddressRegion(
+        name = "sdio",
+        base = BigInt("10090000", 16),
+        size = BigInt("00001000", 16),
+        mmio = true
+      ),
+      AddressRegion(
+        name = "uart2",
+        base = BigInt("10011000", 16),
         size = BigInt("00001000", 16),
         mmio = true
       )
