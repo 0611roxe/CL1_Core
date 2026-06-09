@@ -2,7 +2,8 @@ package utils
 
 import chisel3._
 import chisel3.util._
-import cl1.Cl1Config._
+import cl1.Cl1Config.{SramFoundary, Technology}
+import cl1.Cl1Technology
 
 class sramIO(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false) extends Bundle {
     val addr = Input(UInt(log2Ceil(WordDepth).W))
@@ -14,9 +15,30 @@ class sramIO(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false)
 
 class sram(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false) extends Module {
     val io = IO(new sramIO(WordDepth, DW, BE))
-    val Syn = SramFoundary
+
+    private val addrWidth = log2Ceil(WordDepth)
+    private val useFoundryMacro = SramFoundary
+    private val useSmic100Macro = Cl1Technology.useSmic100Memory(Technology)
+
+    private def connectMacro(mem: SMICSramBlackBoxBase): Unit = {
+        mem.io.CLK := clock
+        mem.io.A := io.addr
+        mem.io.D := io.din
+        mem.io.CEN := !io.ena
+        mem.io.WEN := !(io.wea =/= 0.U)
+        io.dout := mem.io.Q
+    }
+
+    private def byteWriteMask: UInt = {
+        Cat(io.wea.asBools.map(b => Fill(8, !b)).reverse)
+    }
+
+    private def unsupportedMacroWidth: Nothing = {
+        throw new IllegalArgumentException(s"SRAM macro only supports DW=32 or DW=22, got ${DW}.")
+    }
+
     if(BE) {
-        if(!Syn) {
+        if(!useFoundryMacro) {
             val mem = SyncReadMem(WordDepth, Vec(DW/8, UInt(8.W)))
             val dataAsVec = io.din.asTypeOf(Vec(DW/8, UInt(8.W)))
             when(io.ena && io.wea =/= 0.U) {
@@ -24,52 +46,31 @@ class sram(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false) e
             }
             io.dout := mem.read(io.addr, io.ena).asUInt
         } else {
-            require(DW == 32, s"The SRAM macro S55NLLG1PH_X128Y4D32_BW only supports a data width (DW) of 32, but got ${DW}.")
-            val SMICSram = if (Technology == "SMIC110")
-                                { Module(new S011HD1P_X64Y2D32_BW(log2Ceil(WordDepth), DW)) }
-                           else 
-                                { Module(new S55NLLG1PH_X128Y1D32_BW(log2Ceil(WordDepth), DW)) }
+            require(DW == 32, s"Byte-write SRAM macro only supports DW=32, got ${DW}.")
+            val mem =
+                if (useSmic100Macro) Module(new S011HD1P_X64Y2D32_BW(addrWidth, DW))
+                else Module(new S55NLLG1PH_X128Y1D32_BW(addrWidth, DW))
 
-            SMICSram.io.CLK := clock
-            SMICSram.io.A := io.addr
-            SMICSram.io.D := io.din
-            SMICSram.io.CEN := !io.ena
-            SMICSram.io.WEN := !(io.wea =/= 0.U)
-            SMICSram.io.BWEN.foreach(_ := Cat(io.wea.asBools.map(b => Fill(8,!b)).reverse))
-            io.dout := SMICSram.io.Q
+            connectMacro(mem)
+            mem.io.BWEN.foreach(_ := byteWriteMask)
         }
     } else {
-        if(!Syn) {
+        if(!useFoundryMacro) {
             val mem = SyncReadMem(WordDepth, UInt(DW.W))
             when(io.ena && io.wea =/= 0.U) {
                 mem.write(io.addr, io.din)
             }
             io.dout := mem.read(io.addr, io.ena)
         } else {
-            require(DW == 32 || DW == 22, s"The SRAM macro S55NLLG1PH_X128Y4D32_BW only supports a data width (DW) of 32 or 22, but got ${DW}.")
-            if (DW == 32) {
-                val SMICSram = if( Technology == "SMIC110")
-                                    { Module(new S011HD1P_X64Y2D32(log2Ceil(WordDepth), DW)) }
-                               else 
-                                    { Module(new S55NLLG1PH_X128Y1D32(log2Ceil(WordDepth), DW)) }
-                SMICSram.io.CLK := clock
-                SMICSram.io.A := io.addr
-                SMICSram.io.D := io.din
-                SMICSram.io.CEN := !io.ena
-                SMICSram.io.WEN := !(io.wea =/= 0.U)
-                io.dout := SMICSram.io.Q
-            } else {
-                val SMICSram = if( Technology == "SMIC110")
-                                    { Module(new S011HD1P_X64Y2D22(log2Ceil(WordDepth), DW)) }
-                               else 
-                                    { Module(new S55NLLG1PH_X128Y1D22(log2Ceil(WordDepth), DW)) }
-                SMICSram.io.CLK := clock
-                SMICSram.io.A := io.addr
-                SMICSram.io.D := io.din
-                SMICSram.io.CEN := !io.ena
-                SMICSram.io.WEN := !(io.wea =/= 0.U)
-                io.dout := SMICSram.io.Q
+            require(DW == 32 || DW == 22, s"SRAM macro only supports DW=32 or DW=22, got ${DW}.")
+            val mem = (DW, useSmic100Macro) match {
+                case (32, true)  => Module(new S011HD1P_X64Y2D32(addrWidth, DW))
+                case (32, false) => Module(new S55NLLG1PH_X128Y1D32(addrWidth, DW))
+                case (22, true)  => Module(new S011HD1P_X64Y2D22(addrWidth, DW))
+                case (22, false) => Module(new S55NLLG1PH_X128Y1D22(addrWidth, DW))
+                case _           => unsupportedMacroWidth
             }
+            connectMacro(mem)
         }
     }
 }
@@ -95,7 +96,7 @@ class S55NLLG1PH_X128Y1D32_BW(AW: Int = 10, DW: Int = 32)
 
 class S55NLLG1PH_X128Y1D32(AW: Int = 10, DW: Int = 32) 
     extends SMICSramBlackBoxBase("S55NLLG1PH_X128Y1D32", AW, DW, hasBWEN = false)
-class S55NLLG1PH_X128Y1D22(AW: Int = 10, DW: Int = 21)
+class S55NLLG1PH_X128Y1D22(AW: Int = 10, DW: Int = 22)
     extends SMICSramBlackBoxBase("S55NLLG1PH_X128Y1D22", AW, DW, hasBWEN = false)
 class S011HD1P_X64Y2D22(AW: Int = 10, DW: Int = 22)
     extends SMICSramBlackBoxBase("S011HD1P_X64Y2D22", AW, DW, hasBWEN = false)
