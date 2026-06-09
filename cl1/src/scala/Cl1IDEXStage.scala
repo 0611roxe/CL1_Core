@@ -150,7 +150,6 @@ class Cl1IDEXStage extends Module with TrapCode {
   val isIllegalCSR = isCSR && (!CSRs.isMachineReadable(csr_idx) || (csrWrites && CSRs.isReadOnly(csr_idx)))
   val isFetchErr = io.pplIn.bits.ifu_fetch_err
   val isIllegalInst = ctrl.illegal || io.pplIn.bits.rvcIllegal || (isPRIV && !privInstr.orR) || isIllegalCSR
-  val normalInst = !isFetchErr && !isIllegalInst
   val aSel    = ctrl.aSel
   val bSel    = ctrl.bSel
 
@@ -208,16 +207,16 @@ class Cl1IDEXStage extends Module with TrapCode {
   val mem_is_half = ctrl.memType(2, 1) === "b10".U
   val mem_is_word = ctrl.memType(2, 1) === "b11".U
   val mem_misaligned = is_mem && ((mem_is_half && mem_addr(0) =/= 0.U) || (mem_is_word && mem_addr(1, 0) =/= 0.U))
-  val dxHasTrap = isIllegalInst || mem_misaligned
+  val dxHasTrap = isFetchErr || isIllegalInst || mem_misaligned
 
-  val csrRden  = dx_valid & normalInst & (isCSRRW & rd.orR | ( isCSRRC | isCSRRS ))  & ~dx_stall & ~dx_flush
-  val csrWren  = dx_valid & normalInst & csrWrites  & ~dx_stall & ~dx_flush
+  val csrRden  = dx_valid & !dxHasTrap & (isCSRRW & rd.orR | ( isCSRRC | isCSRRS ))  & ~dx_stall & ~dx_flush
+  val csrWren  = dx_valid & !dxHasTrap & csrWrites  & ~dx_stall & ~dx_flush
 
   val rs1_ren  = rs1.orR
   val rs2_ren  = rs2.orR
 
   val rd_notzero = rd.orR
-  val rd_wen = rd_notzero & ctrl.wbWen & normalInst
+  val rd_wen = rd_notzero & ctrl.wbWen & !dxHasTrap
 
   io.csrRen := csrRden
   io.csrAddr := csr_idx
@@ -385,7 +384,7 @@ class Cl1IDEXStage extends Module with TrapCode {
                     op_is_csrread -> io.csrData,
                     op_is_other   -> alu.io.misc_req.res
                   ))
-  pplInfo.privInstr := Mux(normalInst, privInstr, 0.U)
+  pplInfo.privInstr := privInstr
   pplInfo.csrWen := csrWren
   pplInfo.csrWdat := Mux1H(Seq(
                      isCSRRW              -> Mux(isCSRI, csrImm, io.rs1Value),
@@ -394,7 +393,7 @@ class Cl1IDEXStage extends Module with TrapCode {
   pplInfo.pc := io.pplIn.bits.pc
   pplInfo.inst   := inst
   pplInfo.wbType := ctrl.wbType
-  pplInfo.wen := rd_wen && !dxHasTrap
+  pplInfo.wen := rd_wen
   pplInfo.memType := ctrl.memType
   pplInfo.isCInst := io.pplIn.bits.isCInst
   pplInfo.cInst := io.pplIn.bits.cInst
