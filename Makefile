@@ -72,7 +72,7 @@ WAVE      ?= gtkwave
 
 # Phony Targets
 .DEFAULT_GOAL := verilog
-.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache help reformat checkformat clean run
+.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-full-soc-syn verilog-full-soc-diff verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache help reformat checkformat clean run
 
 # Generate Verilog
 FIRTOOL_VERSION = 1.105.0
@@ -105,6 +105,14 @@ verilog: verilog-full-cache-axi
 verilog-full-cache-axi:
 	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false,Cl1Top)
 
+# Full SoC tapeout/synthesis target: CX55 technology, foundry SRAM macros, no SOC diff port.
+verilog-full-soc-syn:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_PLATFORM=full_soc CL1_TECHNOLOGY=CX55 CL1_SYN=true CL1_SOC_DIFF=false CL1_TOP_NAME=Cl1Top_FullSoc_Syn CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false,Cl1Top_FullSoc_Syn)
+
+# Full SoC verification target: same as synthesis target, with SOC diff port enabled.
+verilog-full-soc-diff:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_PLATFORM=full_soc CL1_TECHNOLOGY=CX55 CL1_SYN=true CL1_SOC_DIFF=true CL1_TOP_NAME=Cl1Top_FullSoc_Diff CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false,Cl1Top_FullSoc_Diff)
+
 # AXI master interface, normal MDU, no ICache/DCache.
 verilog-no-cache:
 	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_NoCache CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_NoCache)
@@ -119,7 +127,7 @@ verilog-rvfi-axi:
 
 # RVFI with riscv-formal M-extension alternative ops, AXI exposed, minimal cache.
 verilog-rvfi-cache:
-	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false CL1_FORMAL_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SYN=false CL1_FORMAL_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
 
 # Show Help for Elaborate
 help:
