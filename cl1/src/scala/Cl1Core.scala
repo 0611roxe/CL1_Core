@@ -16,6 +16,7 @@ class Cl1Core extends Module {
     val ext_irq   = Input(Bool())
     val sft_irq   = Input(Bool())
     val tmr_irq   = Input(Bool())
+    val boot_addr = Input(UInt(32.W))
     val core_wfi  = Output(Bool())
     val master    = if(!EXPOSE_CORE_BUS) Some(new AXI4(BUS_WIDTH, BUS_WIDTH, 5)) else None
     val ibus      = if(EXPOSE_CORE_BUS)  Some(new CoreBus)  else None  // instruction fetch bus
@@ -60,6 +61,7 @@ class Cl1Core extends Module {
   ifStage.io.flush_pc_ofst := Mux(dm.io.dbg_flush, 0.U, excp.io.flush_ofst)
   ifStage.io.ifu_halt := excp.io.ifu_halt
   ifStage.io.ifu_stall := excp.io.ifu_stall
+  ifStage.io.boot_addr := io.boot_addr
   excp.io.next_pc := ifStage.io.next_pc
   excp.io.ifu_halt_ack    := ifStage.io.ifu_halt_ack
 

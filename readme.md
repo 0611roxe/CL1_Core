@@ -66,7 +66,7 @@ cl1_core/
 
 | 配置项 | 当前值 | 描述 |
 |--------|--------|------|
-| `BOOT_ADDR` | `0x80000000` | 复位后 PC 启动地址；当 `fullSocTest=true` 时切换为 `0x01000000`。 |
+| `BOOT_ADDR` | `0x80000000` | 平台默认启动地址；处理器复位 PC 实际由顶层输入端口 `io_boot_addr` 传入，当 `fullSocTest=true` 时默认值为 `0x01000000`。 |
 | `TVEC_ADDR` | `0x20000000` | `mtvec` 初始异常向量基地址。 |
 | `BUS_WIDTH` | `32` | 核内 AXI/CoreBus 基础数据宽度。 |
 | `CKG_EN` | `false` | 顶层核心时钟门控开关；打开后在 `WFI` 状态下可门控核心时钟。 |
@@ -87,6 +87,8 @@ cl1_core/
 | `EXPOSE_CORE_BUS` | `true` in `bus`, `false` in `cache` | 顶层直接暴露 `ibus`/`dbus` 两个 `CoreBus` 接口；cache 模式导出 AXI4 `master` 接口，并接入 ICache/DCache/xbar/桥接逻辑。 |
 
 地址空间配置在 `cl1/src/scala/AddressMap.scala` 和 `sim_verilator/platforms.py` 中显式维护。默认平台是 `simple_soc`；如需切换到 full SoC，使用 `CL1_PLATFORM=full_soc` 重新构建。`CL1_ADDRESS_PROFILE` 仍作为旧脚本兼容别名保留。
+
+处理器顶层导出 `io_boot_addr` 输入端口作为复位后的取指起始地址。集成 SoC 时需要在复位释放前稳定驱动该端口；Verilator 流程会通过平台配置自动传入对应默认值，也可用 `--boot-addr <addr>` 覆盖。
 
 ### 测试模式切换
 

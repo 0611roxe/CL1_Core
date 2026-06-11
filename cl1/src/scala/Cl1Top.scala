@@ -23,6 +23,7 @@ class Cl1Top extends Module{
     val sft_irq   = Input(Bool())
     val tmr_irq   = Input(Bool())
     val dbg_req_i = Input(Bool())
+    val boot_addr = Input(UInt(32.W))
     val diff_o    = if(SOC_DIFF) Some(new diff) else None
     val master    = if(!EXPOSE_CORE_BUS) Some(new AXI4(BUS_WIDTH, if (SOC_D64) 64 else BUS_WIDTH, 5)) else None
     val ibus      = if(EXPOSE_CORE_BUS)  Some(new CoreBus) else None  // instruction fetch bus
@@ -52,6 +53,7 @@ class Cl1Top extends Module{
   core.io.ext_irq   := io.ext_irq
   core.io.sft_irq   := io.sft_irq
   core.io.tmr_irq   := io.tmr_irq
+  core.io.boot_addr := io.boot_addr
 
   if(EXPOSE_CORE_BUS) {
     io.ibus.get <> core.io.ibus.get

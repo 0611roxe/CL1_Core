@@ -2,7 +2,6 @@ package cl1
 
 import chisel3._
 import chisel3.util._
-import cl1.Cl1Config.BOOT_ADDR
 
 class IF2IDEXSignal extends Bundle {
   val pc              = Output(UInt(32.W))
@@ -38,6 +37,7 @@ class Cl1IFStage extends Module {
     val ifu_stall     = Input(Bool())
     val ifu_halt_ack  = Output(Bool())
     val next_pc       = Output(UInt(32.W))
+    val boot_addr     = Input(UInt(32.W))
   })
 
   val aligner         = BypReg(io.fromaligner)
@@ -116,7 +116,7 @@ class Cl1IFStage extends Module {
                         Mux(flush_pluse,       flush_pc,
                         Mux(flush_pending,       pc_r,
                         Mux(bpu_redirect_req,  prdt_pc,
-                        Mux(reset_req_r,       BOOT_ADDR.U,
+                        Mux(reset_req_r,       io.boot_addr,
                         pc_r))))
 
   val pc_adder_op2    =
