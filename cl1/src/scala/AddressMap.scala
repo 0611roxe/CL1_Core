@@ -134,7 +134,7 @@ object PlatformAddressMaps {
       AddressRegion(
         name = "clint",
         base = BigInt("02000000", 16),
-        size = BigInt("000c0000", 16),
+        size = BigInt("00c00000", 16),
         mmio = true
       ),
       AddressRegion(
@@ -178,6 +178,12 @@ object PlatformAddressMaps {
       AddressRegion(
         name = "cru",
         base = BigInt("100a0000", 16),
+        size = BigInt("00001000", 16),
+        mmio = true
+      ),
+      AddressRegion(
+        name = "sdram_cfg",
+        base = BigInt("100b0000", 16),
         size = BigInt("00001000", 16),
         mmio = true
       ),
