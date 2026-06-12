@@ -32,6 +32,7 @@ class CacheBus extends Bundle {
         val addr    = Output(UInt(32.W))
         val data    = Output(UInt(32.W))
         val wen     = Output(Bool())
+        val instr   = Output(Bool())
         val burst   = Output(Bool())
         val mask    = Output(UInt(4.W))
         val len     = Output(UInt(4.W))
@@ -222,6 +223,7 @@ class Cl1ICACHE extends Module {
     io.out.req.bits.addr    := Mux(burst_trans, burst_start_addr, single_addr)
     io.out.req.bits.data    := 0.U
     io.out.req.bits.wen     := false.B
+    io.out.req.bits.instr   := true.B
     io.out.req.bits.burst   := burst_trans
     io.out.req.bits.mask    := Fill(CacheParams.DW/8, true.B)
     io.out.req.bits.len     := Mux(burst_trans,(CacheParams.BANKS - 1).U, 0.U)

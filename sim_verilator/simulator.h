@@ -10,6 +10,7 @@
 
 #include <verilated_fst_c.h>
 
+#include "axi_slave_model.h"
 #include "common.h"
 #include "memory_model.h"
 #include "options.h"
@@ -18,38 +19,6 @@
 class VCl1Top;
 
 namespace cl1sim {
-
-#if defined(CL1_TEST_MODE_CACHE)
-enum class AxiReadState {
-  kIdle,
-  kData
-};
-
-enum class AxiWriteState {
-  kIdle,
-  kData,
-  kResp
-};
-
-struct AxiReadContext {
-  AxiReadState state = AxiReadState::kIdle;
-  uint32_t addr = 0;
-  uint8_t len = 0;
-  uint8_t beat = 0;
-  uint8_t size = 2;
-  uint32_t data = 0;
-  bool err = false;
-};
-
-struct AxiWriteContext {
-  AxiWriteState state = AxiWriteState::kIdle;
-  uint32_t addr = 0;
-  uint8_t len = 0;
-  uint8_t beat = 0;
-  uint8_t size = 2;
-  bool err = false;
-};
-#endif
 
 struct CycleSnapshot {
 #if defined(CL1_TEST_MODE_BUS)
@@ -78,12 +47,7 @@ struct CycleSnapshot {
   bool b_valid = false;
   bool r_ready = false;
   bool b_ready = false;
-  BusRequest read_request;
-  BusRequest write_request;
-  uint8_t ar_len = 0;
-  uint8_t r_beat = 0;
-  uint8_t aw_len = 0;
-  uint8_t w_beat = 0;
+  AxiSlaveCycle axi_cycle;
 #endif
 };
 
@@ -108,8 +72,6 @@ class Simulator {
   CycleSnapshot tick_internal();
   void drive_memory_side();
   CycleSnapshot sample_cycle_snapshot() const;
-  static uint32_t axi_next_addr(uint32_t base, uint8_t beat, uint8_t size);
-  void prepare_axi_read_beat(StopInfo& stop);
   void complete_memory_handshakes(const CycleSnapshot& snapshot, StopInfo& stop);
   void observe_commit(StopInfo& stop);
   void observe_trap_stop(StopInfo& stop);
@@ -130,8 +92,7 @@ class Simulator {
   PendingResponse ibus_pending_{};
   PendingResponse dbus_pending_{};
 #else
-  AxiReadContext axi_read_{};
-  AxiWriteContext axi_write_{};
+  AxiSlaveModel axi_slave_;
 #endif
   uint64_t cycle_count_ = 0;
 };

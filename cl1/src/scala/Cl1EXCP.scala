@@ -149,6 +149,10 @@ class Cl1EXCP() extends Module with TrapCode {
 
     val dxwb_pipeEmpty = !dx_valid && !wb_valid
 
+    val irq_drain_done = dxwb_pipeEmpty
+    val irq_drain_take = irq_req & irq_drain_done
+    val irq_drain_drop = !irq_req & irq_drain_done
+
     val sIdle :: sIrqDrain :: sIrqFlush :: sExcpFlush :: Nil = Enum(4)
     val state_en         = WireInit(false.B)
     val state_n          = WireInit(sIdle)
@@ -180,8 +184,8 @@ class Cl1EXCP() extends Module with TrapCode {
             state_en := excp_req | dxwb_pipeEmpty
             state_n  := MuxCase(state, Seq(
                 excp_req -> sExcpFlush,
-                (irq_req & dxwb_pipeEmpty) -> sIrqFlush,
-                (!irq_req & dxwb_pipeEmpty) -> sIdle
+                irq_drain_take -> sIrqFlush,
+                irq_drain_drop -> sIdle
             ))
         }
         is(sIrqFlush) {
@@ -196,7 +200,7 @@ class Cl1EXCP() extends Module with TrapCode {
     val stIsIrqDrain  = isState(sIrqDrain)
     val stIsIrqFlush  = isState(sIrqFlush)
     val stIsExcpFlush = isState(sExcpFlush)
-    irq_csr_save_en := stIsIrqFlush
+    irq_csr_save_en := stIsIrqDrain & irq_drain_take
     val dxu_stall      = excp_req
     val ifu_stall      = stIsIrqDrain
 

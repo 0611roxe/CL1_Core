@@ -91,6 +91,41 @@ class IDEXIllegalInstructionTest extends AnyFreeSpec with ChiselScalatestTester 
   }
 }
 
+class IDEXFetchExceptionTest extends AnyFreeSpec with ChiselScalatestTester {
+  "fetch error enters the WB instruction access fault path without side effects" in {
+    test(new Cl1IDEXStage()) { dut =>
+      dut.io.pplIn.valid.poke(true.B)
+      dut.io.pplIn.bits.pc.poke("h80000024".U)
+      dut.io.pplIn.bits.inst.poke("h00102083".U)
+      dut.io.pplIn.bits.prdt_taken.poke(0.U)
+      dut.io.pplIn.bits.cInst.poke(0.U)
+      dut.io.pplIn.bits.isCInst.poke(false.B)
+      dut.io.pplIn.bits.rvcIllegal.poke(false.B)
+      dut.io.pplIn.bits.ifu_fetch_err.poke(true.B)
+      dut.io.pplIn.bits.muldiv_b2b.poke(false.B)
+
+      dut.io.pplOut.ready.poke(true.B)
+      dut.io.mem.ready.poke(true.B)
+      dut.io.rs1Value.poke(0.U)
+      dut.io.rs2Value.poke(0.U)
+      dut.io.csrData.poke(0.U)
+      dut.io.stall.poke(false.B)
+      dut.io.flush.poke(false.B)
+      dut.io.icache_req.ready.poke(true.B)
+      dut.io.dcache_req.ready.poke(true.B)
+
+      dut.io.pplOut.valid.expect(true.B)
+      dut.io.pplOut.bits.isTrap.expect(true.B)
+      dut.io.pplOut.bits.trapCode.expect(1.U)
+      dut.io.pplOut.bits.trapValue.expect("h80000024".U)
+      dut.io.pplOut.bits.wen.expect(false.B)
+      dut.io.pplOut.bits.csrWen.expect(false.B)
+      dut.io.mem.valid.expect(false.B)
+      dut.io.toifu.flush_req.expect(false.B)
+    }
+  }
+}
+
 class EXCPIllegalInstructionTest extends AnyFreeSpec with ChiselScalatestTester {
   "illegal instruction trap reuses the normal exception redirect and CSR update path" in {
     test(new Cl1EXCP()) { dut =>

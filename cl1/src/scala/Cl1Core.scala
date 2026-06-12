@@ -188,7 +188,7 @@ class Cl1Core extends Module {
       idStage.io.icache_req <> icache.io.dxReq
       xbar.io.in(0) <> icache.io.out
     } else {
-      val ibridge = Module(new CoreBus2CacheBus)
+      val ibridge = Module(new CoreBus2CacheBus(instr = true))
       aligner.io.bus <> ibridge.io.in
       excp.io.icache_idle := true.B
       idStage.io.icache_req.ready := true.B

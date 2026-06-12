@@ -6,7 +6,6 @@ ROOT_DIR=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 BUILD_DIR="${SCRIPT_DIR}/build"
 OBJ_DIR="${BUILD_DIR}/obj_dir"
 TOP_MODULE="Cl1Top"
-NIX_HELPER="${SCRIPT_DIR}/nix_env.sh"
 CL1_TEST_MODE="${CL1_TEST_MODE:-bus}"
 CL1_PLATFORM="${CL1_PLATFORM:-${CL1_ADDRESS_PROFILE:-simple_soc}}"
 
@@ -22,10 +21,14 @@ RTL_FILE="${RTL_DIR}/Cl1Top.sv"
 SIM_BIN="${MODE_BUILD_DIR}/cl1_verilator"
 LEGACY_SIM_LINK="${BUILD_DIR}/cl1_verilator"
 
-maybe_source_nix_env() {
-  # shellcheck disable=SC1090
-  source "${NIX_HELPER}"
-  sim_verilator_source_nix_env "${ROOT_DIR}" "[build]" verilator c++ make
+require_tools() {
+  local tool
+  for tool in "$@"; do
+    if ! command -v "${tool}" >/dev/null 2>&1; then
+      echo "[build] error: missing required tool '${tool}'; enable direnv or run nix develop first" >&2
+      exit 1
+    fi
+  done
 }
 
 ensure_rtl() {
@@ -48,6 +51,7 @@ build_sim() {
     "${SCRIPT_DIR}/random_irq.cpp"
     "${SCRIPT_DIR}/options.cpp"
     "${SCRIPT_DIR}/memory_model.cpp"
+    "${SCRIPT_DIR}/axi_slave_model.cpp"
     "${SCRIPT_DIR}/simulator.cpp"
   )
   verilator \
@@ -76,7 +80,7 @@ build_sim() {
 }
 
 main() {
-  maybe_source_nix_env
+  require_tools verilator c++ make
   ensure_rtl
   build_sim
 }

@@ -6,7 +6,11 @@
 #include <string>
 #include <vector>
 
+#if __has_include(<verilated.h>)
 #include <verilated.h>
+#else
+using vluint64_t = uint64_t;
+#endif
 
 #if !defined(CL1_TEST_MODE_BUS) && !defined(CL1_TEST_MODE_CACHE)
 #define CL1_TEST_MODE_BUS 1
@@ -103,6 +107,7 @@ struct BusRequest {
   uint8_t mask = 0;
   uint8_t size = 0;
   bool wen = false;
+  bool instr = false;
 };
 
 struct PendingResponse {

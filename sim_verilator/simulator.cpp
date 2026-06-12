@@ -1,6 +1,5 @@
 #include "simulator.h"
 
-#include <algorithm>
 #include <iostream>
 #include <stdexcept>
 #include <utility>
@@ -223,19 +222,19 @@ void Simulator::drive_memory_side() {
   top_->io_dbus_rsp_bits_data = dbus_pending_.data;
   top_->io_dbus_rsp_bits_err = dbus_pending_.err ? 1 : 0;
 #else
-  top_->io_master_ar_ready = (axi_read_.state == AxiReadState::kIdle) ? 1 : 0;
-  top_->io_master_r_valid = (axi_read_.state == AxiReadState::kData) ? 1 : 0;
-  top_->io_master_r_bits_rdata = axi_read_.data;
-  top_->io_master_r_bits_rresp = axi_read_.err ? 1 : 0;
-  top_->io_master_r_bits_rlast = (axi_read_.state == AxiReadState::kData && axi_read_.beat == axi_read_.len) ? 1 : 0;
-  top_->io_master_r_bits_rid = 0;
+  const AxiSlaveOutputs axi = axi_slave_.outputs();
+  top_->io_master_ar_ready = axi.ar_ready ? 1 : 0;
+  top_->io_master_r_valid = axi.r_valid ? 1 : 0;
+  top_->io_master_r_bits_rdata = axi.r_data;
+  top_->io_master_r_bits_rresp = axi.r_resp;
+  top_->io_master_r_bits_rlast = axi.r_last ? 1 : 0;
+  top_->io_master_r_bits_rid = axi.r_id;
 
-  top_->io_master_aw_ready = (axi_write_.state == AxiWriteState::kIdle) ? 1 : 0;
-  top_->io_master_w_ready =
-      (axi_write_.state == AxiWriteState::kIdle || axi_write_.state == AxiWriteState::kData) ? 1 : 0;
-  top_->io_master_b_valid = (axi_write_.state == AxiWriteState::kResp) ? 1 : 0;
-  top_->io_master_b_bits_bresp = axi_write_.err ? 1 : 0;
-  top_->io_master_b_bits_bid = 0;
+  top_->io_master_aw_ready = axi.aw_ready ? 1 : 0;
+  top_->io_master_w_ready = axi.w_ready ? 1 : 0;
+  top_->io_master_b_valid = axi.b_valid ? 1 : 0;
+  top_->io_master_b_bits_bresp = axi.b_resp;
+  top_->io_master_b_bits_bid = axi.b_id;
 #endif
 }
 
@@ -257,6 +256,7 @@ CycleSnapshot Simulator::sample_cycle_snapshot() const {
     snapshot.ibus_request.mask = top_->io_ibus_req_bits_mask;
     snapshot.ibus_request.size = top_->io_ibus_req_bits_size;
     snapshot.ibus_request.wen = top_->io_ibus_req_bits_wen;
+    snapshot.ibus_request.instr = true;
   }
 
   if (snapshot.dbus_req_valid && top_->io_dbus_req_ready) {
@@ -266,79 +266,50 @@ CycleSnapshot Simulator::sample_cycle_snapshot() const {
     snapshot.dbus_request.mask = top_->io_dbus_req_bits_mask;
     snapshot.dbus_request.size = top_->io_dbus_req_bits_size;
     snapshot.dbus_request.wen = top_->io_dbus_req_bits_wen;
+    snapshot.dbus_request.instr = false;
   }
 
   snapshot.ibus_rsp_fire = snapshot.ibus_rsp_valid && snapshot.ibus_rsp_ready;
   snapshot.dbus_rsp_fire = snapshot.dbus_rsp_valid && snapshot.dbus_rsp_ready;
 #else
-  snapshot.ar_valid = top_->io_master_ar_valid;
-  snapshot.r_valid = (axi_read_.state == AxiReadState::kData);
-  snapshot.aw_valid = top_->io_master_aw_valid;
-  snapshot.w_valid = top_->io_master_w_valid;
-  snapshot.b_valid = (axi_write_.state == AxiWriteState::kResp);
-  snapshot.r_ready = top_->io_master_r_ready;
-  snapshot.b_ready = top_->io_master_b_ready;
+  AxiSlaveInputs inputs;
+  inputs.ar_valid = top_->io_master_ar_valid;
+  inputs.ar_addr = top_->io_master_ar_bits_araddr;
+  inputs.ar_id = top_->io_master_ar_bits_arid;
+  inputs.ar_len = top_->io_master_ar_bits_arlen;
+  inputs.ar_size = top_->io_master_ar_bits_arsize;
+  inputs.ar_burst = top_->io_master_ar_bits_arburst;
+  inputs.ar_prot = top_->io_master_ar_bits_arprot;
+  inputs.r_ready = top_->io_master_r_ready;
 
-  if (snapshot.ar_valid && top_->io_master_ar_ready) {
-    snapshot.ar_fire = true;
-    snapshot.read_request.addr = top_->io_master_ar_bits_araddr;
-    snapshot.read_request.mask = kFullWordMask;
-    snapshot.read_request.size = top_->io_master_ar_bits_arsize;
-    snapshot.read_request.wen = false;
-    snapshot.ar_len = top_->io_master_ar_bits_arlen;
-  }
+  inputs.aw_valid = top_->io_master_aw_valid;
+  inputs.aw_addr = top_->io_master_aw_bits_awaddr;
+  inputs.aw_id = top_->io_master_aw_bits_awid;
+  inputs.aw_len = top_->io_master_aw_bits_awlen;
+  inputs.aw_size = top_->io_master_aw_bits_awsize;
+  inputs.aw_burst = top_->io_master_aw_bits_awburst;
 
-  if (snapshot.aw_valid && top_->io_master_aw_ready) {
-    snapshot.aw_fire = true;
-    snapshot.write_request.addr = top_->io_master_aw_bits_awaddr;
-    snapshot.write_request.size = top_->io_master_aw_bits_awsize;
-    snapshot.write_request.wen = true;
-    snapshot.aw_len = top_->io_master_aw_bits_awlen;
-  }
+  inputs.w_valid = top_->io_master_w_valid;
+  inputs.w_data = top_->io_master_w_bits_wdata;
+  inputs.w_strb = top_->io_master_w_bits_wstrb;
+  inputs.w_last = top_->io_master_w_bits_wlast;
+  inputs.b_ready = top_->io_master_b_ready;
 
-  if (snapshot.w_valid && top_->io_master_w_ready) {
-    snapshot.w_fire = true;
-    const uint32_t write_base =
-        snapshot.aw_fire ? static_cast<uint32_t>(top_->io_master_aw_bits_awaddr) : axi_write_.addr;
-    const uint8_t write_size =
-        snapshot.aw_fire ? static_cast<uint8_t>(top_->io_master_aw_bits_awsize) : axi_write_.size;
-    const uint8_t write_beat = snapshot.aw_fire ? 0 : axi_write_.beat;
-    snapshot.write_request.addr = axi_next_addr(write_base, write_beat, write_size);
-    snapshot.write_request.data = top_->io_master_w_bits_wdata;
-    snapshot.write_request.mask = top_->io_master_w_bits_wstrb;
-    snapshot.write_request.size = write_size;
-    snapshot.write_request.wen = true;
-    snapshot.w_beat = write_beat;
-  }
-
-  snapshot.r_fire = snapshot.r_valid && snapshot.r_ready;
-  snapshot.b_fire = snapshot.b_valid && snapshot.b_ready;
-  snapshot.r_beat = axi_read_.beat;
+  snapshot.axi_cycle = axi_slave_.sample(inputs);
+  snapshot.ar_valid = inputs.ar_valid;
+  snapshot.r_valid = snapshot.axi_cycle.outputs.r_valid;
+  snapshot.aw_valid = inputs.aw_valid;
+  snapshot.w_valid = inputs.w_valid;
+  snapshot.b_valid = snapshot.axi_cycle.outputs.b_valid;
+  snapshot.r_ready = inputs.r_ready;
+  snapshot.b_ready = inputs.b_ready;
+  snapshot.ar_fire = snapshot.axi_cycle.ar_fire;
+  snapshot.r_fire = snapshot.axi_cycle.r_fire;
+  snapshot.aw_fire = snapshot.axi_cycle.aw_fire;
+  snapshot.w_fire = snapshot.axi_cycle.w_fire;
+  snapshot.b_fire = snapshot.axi_cycle.b_fire;
 #endif
   return snapshot;
-}
-
-uint32_t Simulator::axi_next_addr(uint32_t base, uint8_t beat, uint8_t size) {
-  const uint32_t bytes = 1u << std::min<uint8_t>(size, kMaxAxiTransferSizeLog2);
-  return base + static_cast<uint32_t>(beat) * bytes;
-}
-
-void Simulator::prepare_axi_read_beat(StopInfo& stop) {
-#if defined(CL1_TEST_MODE_CACHE)
-  if (axi_read_.state != AxiReadState::kData) {
-    return;
-  }
-  BusRequest request;
-  request.addr = axi_next_addr(axi_read_.addr, axi_read_.beat, axi_read_.size);
-  request.mask = kFullWordMask;
-  request.size = axi_read_.size;
-  request.wen = false;
-  const PendingResponse response = memory_.handle_request(request, false, stop);
-  axi_read_.data = response.data;
-  axi_read_.err = response.err;
-#else
-  (void)stop;
-#endif
 }
 
 void Simulator::complete_memory_handshakes(const CycleSnapshot& snapshot, StopInfo& stop) {
@@ -358,55 +329,15 @@ void Simulator::complete_memory_handshakes(const CycleSnapshot& snapshot, StopIn
     dbus_pending_ = memory_.handle_request(snapshot.dbus_request, false, stop);
   }
 #else
-  if (snapshot.r_fire) {
-    if (axi_read_.beat == axi_read_.len) {
-      axi_read_ = AxiReadContext{};
-    } else {
-      ++axi_read_.beat;
-      if (!stop.stopped()) {
-        prepare_axi_read_beat(stop);
-      }
+  axi_slave_.commit(snapshot.axi_cycle, [&](const BusRequest& request, bool is_fetch) {
+    if (stop.stopped()) {
+      PendingResponse response;
+      response.valid = true;
+      response.err = true;
+      return response;
     }
-  }
-
-  if (snapshot.b_fire) {
-    axi_write_ = AxiWriteContext{};
-  }
-
-  if (!stop.stopped() && snapshot.ar_fire) {
-    axi_read_.state = AxiReadState::kData;
-    axi_read_.addr = snapshot.read_request.addr;
-    axi_read_.len = snapshot.ar_len;
-    axi_read_.beat = 0;
-    axi_read_.size = snapshot.read_request.size;
-    axi_read_.err = false;
-    prepare_axi_read_beat(stop);
-  }
-
-  if (!stop.stopped() && snapshot.aw_fire && !snapshot.w_fire) {
-    axi_write_.state = AxiWriteState::kData;
-    axi_write_.addr = snapshot.write_request.addr;
-    axi_write_.len = snapshot.aw_len;
-    axi_write_.beat = 0;
-    axi_write_.size = snapshot.write_request.size;
-    axi_write_.err = false;
-  }
-
-  if (!stop.stopped() && snapshot.w_fire) {
-    const PendingResponse response = memory_.handle_request(snapshot.write_request, false, stop);
-    axi_write_.err = axi_write_.err || response.err;
-    const uint8_t write_len = snapshot.aw_fire ? snapshot.aw_len : axi_write_.len;
-    const bool last = top_->io_master_w_bits_wlast || snapshot.w_beat == write_len;
-    if (last) {
-      axi_write_.state = AxiWriteState::kResp;
-    } else {
-      axi_write_.state = AxiWriteState::kData;
-      axi_write_.addr = snapshot.aw_fire ? static_cast<uint32_t>(top_->io_master_aw_bits_awaddr) : axi_write_.addr;
-      axi_write_.len = write_len;
-      axi_write_.beat = snapshot.w_beat + 1;
-      axi_write_.size = snapshot.write_request.size;
-    }
-  }
+    return memory_.handle_request(request, is_fetch, stop);
+  });
 #endif
 }
 

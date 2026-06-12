@@ -73,7 +73,7 @@ WAVE      ?= gtkwave
 
 # Phony Targets
 .DEFAULT_GOAL := verilog
-.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache verilog-cache-formal help reformat checkformat clean run
+.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-full-soc-syn verilog-full-soc-diff verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache verilog-cache-formal help reformat checkformat clean run
 
 # Generate Verilog
 FIRTOOL_VERSION = 1.105.0
@@ -106,24 +106,32 @@ verilog: verilog-full-cache-axi
 verilog-full-cache-axi:
 	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false,Cl1Top)
 
+# Full SoC tapeout/synthesis target: CX55 technology, foundry SRAM macros, no SOC diff port.
+verilog-full-soc-syn:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_PLATFORM=full_soc CL1_TECHNOLOGY=CX55 CL1_SYN=true CL1_SOC_DIFF=false CL1_TOP_NAME=Cl1Top_FullSoc_Syn CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false,Cl1Top_FullSoc_Syn)
+
+# Full SoC verification target: same as synthesis target, with SOC diff port enabled.
+verilog-full-soc-diff:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_PLATFORM=full_soc CL1_TECHNOLOGY=CX55 CL1_SYN=true CL1_SOC_DIFF=true CL1_TOP_NAME=Cl1Top_FullSoc_Diff CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false,Cl1Top_FullSoc_Diff)
+
 # AXI master interface, normal MDU, no ICache/DCache.
 verilog-no-cache:
 	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_NoCache CL1_FORMAL_VERIF=false CL1_RISCV_FORMAL_ALTOPS=false CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_NoCache)
 
 # RVFI with riscv-formal M-extension alternative ops, CoreBus exposed, no cache.
 verilog-rvfi:
-	$(call gen_verilog,CL1_TEST_MODE=bus CL1_TOP_NAME=Cl1Top_RVFI CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_EXPOSE_CORE_BUS=true CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_RVFI)
+	$(call gen_verilog,CL1_TEST_MODE=bus CL1_TOP_NAME=Cl1Top CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_EXPOSE_CORE_BUS=true CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top)
 
 # RVFI with riscv-formal M-extension alternative ops, AXI exposed, no cache.
 verilog-rvfi-axi:
-	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_AXI CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_RVFI_AXI)
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_AXI CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_AXI)
 
 # RVFI with riscv-formal M-extension alternative ops, AXI exposed, minimal cache.
 verilog-rvfi-cache:
-	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false CL1_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SYN=false CL1_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
 
 verilog-cache-formal:
-	$(call gen_verilog,CL1_ELAB_TOP=cache CL1_TOP_NAME=Cl1CacheFormal CL1_TEST_MODE=cache CL1_SRAM_FOUNDARY=false CL1_FORMAL_CACHE_OBSERVE=true CL1_CACHE_IDXW=$(CL1_CACHE_IDXW),Cl1CacheFormal)
+	$(call gen_verilog,CL1_ELAB_TOP=cache CL1_TOP_NAME=Cl1CacheFormal CL1_TEST_MODE=cache CL1_SYN=false CL1_FORMAL_CACHE_OBSERVE=true CL1_CACHE_IDXW=$(CL1_CACHE_IDXW),Cl1CacheFormal)
 
 # Show Help for Elaborate
 help:
@@ -145,6 +153,40 @@ clean:
 	@echo "Cleaning build artifacts..."
 	$(RM) $(BUILD_DIR)
 	$(RM) $(wildcard $(VSRC_DIR)/*.sv $(VSRC_DIR)/*.v)
+
+SIM_MAKE := $(MAKE) -C sim_verilator
+REGRESSION_SUITE ?= $(if $(SUITE),$(SUITE),full)
+LEVEL ?= full
+TESTS ?= tests
+RVDV_ARGS ?=
+SIM_ARGS ?=
+COMPARE ?=
+NO_BUILD_SIM ?=
+NO_BUILD_TESTS ?=
+
+sim-build:
+	$(SIM_MAKE) build CL1_TEST_MODE=$(CL1_TEST_MODE) CL1_PLATFORM=$(CL1_PLATFORM)
+
+selftest:
+	$(SIM_MAKE) selftest CL1_TEST_MODE=$(CL1_TEST_MODE) CL1_PLATFORM=$(CL1_PLATFORM)
+
+regression:
+	$(SIM_MAKE) regression CL1_TEST_MODE=$(CL1_TEST_MODE) CL1_PLATFORM=$(CL1_PLATFORM) REGRESSION_SUITE=$(REGRESSION_SUITE) NO_BUILD_SIM=$(NO_BUILD_SIM) NO_BUILD_TESTS=$(NO_BUILD_TESTS)
+
+sim-check:
+	$(SIM_MAKE) check CL1_TEST_MODE=$(CL1_TEST_MODE) CL1_PLATFORM=$(CL1_PLATFORM) LEVEL=$(LEVEL) NO_BUILD_SIM=$(NO_BUILD_SIM) NO_BUILD_TESTS=$(NO_BUILD_TESTS)
+
+sim-test:
+	$(SIM_MAKE) test CL1_TEST_MODE=$(CL1_TEST_MODE) CL1_PLATFORM=$(CL1_PLATFORM) TESTS=$(TESTS)
+
+sim-run:
+	$(SIM_MAKE) run CL1_TEST_MODE=$(CL1_TEST_MODE) CL1_PLATFORM=$(CL1_PLATFORM) IMAGE=$(IMAGE) SIM_ARGS="$(SIM_ARGS)"
+
+riscv-dv:
+	$(SIM_MAKE) riscv-dv CL1_TEST_MODE=$(CL1_TEST_MODE) CL1_PLATFORM=$(CL1_PLATFORM) SUITE=$(SUITE) RVDV_ARGS="$(RVDV_ARGS)" COMPARE=$(COMPARE)
+
+sim-clean:
+	$(SIM_MAKE) clean
 
 
 RTLSRC_CPU := $(wildcard $(CPU_DIR)/*.sv) $(wildcard $(CPU_DIR)/*.v) 

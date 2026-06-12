@@ -17,19 +17,10 @@ object MemoryMap {
   def isDSRAM(addr: UInt): Bool = selected.containsRegion(addr, "dsram")
   def isSDRAM(addr: UInt): Bool = selected.containsRegion(addr, "sdram")
   def isQSPIMem(addr: UInt): Bool = selected.containsRegion(addr, "qspi_mem")
+  def isDMA(addr: UInt): Bool = selected.containsRole(addr, "dma")
+  def isSDIO(addr: UInt): Bool = selected.containsRegion(addr, "sdio")
+  def isUART2(addr: UInt): Bool = selected.containsRegion(addr, "uart2")
   def isMMIO(addr: UInt): Bool = selected.isMMIO(addr)
   def isICacheable(addr: UInt): Bool = selected.isICacheable(addr)
   def isDCacheable(addr: UInt): Bool = selected.isDCacheable(addr)
-}
-
-object SimpleSocMemoryMap {
-  def isRegion(addr: UInt, start: UInt, end: UInt): Bool = MemoryMap.isRegion(addr, start, end)
-
-  def isRAM(addr: UInt): Bool = MemoryMap.isRAM(addr)
-  def isDebug(addr: UInt): Bool = MemoryMap.isDebug(addr)
-  def isUART(addr: UInt): Bool = MemoryMap.isUART(addr)
-  def isHostExit(addr: UInt): Bool = MemoryMap.isHostExit(addr)
-  def isMMIO(addr: UInt): Bool = MemoryMap.isMMIO(addr)
-  def isICacheable(addr: UInt): Bool = MemoryMap.isICacheable(addr)
-  def isDCacheable(addr: UInt): Bool = MemoryMap.isDCacheable(addr)
 }
