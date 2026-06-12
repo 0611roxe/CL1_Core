@@ -1,4 +1,12 @@
 object Elaborate extends App {
+  private def topKind(default: String): String =
+    sys.props.get("CL1_ELAB_TOP")
+      .orElse(sys.env.get("CL1_ELAB_TOP"))
+      .map(_.trim)
+      .filter(_.nonEmpty)
+      .getOrElse(default)
+      .toLowerCase
+
   private def topName(default: String): String =
     sys.props.get("CL1_TOP_NAME")
       .orElse(sys.env.get("CL1_TOP_NAME"))
@@ -23,13 +31,25 @@ object Elaborate extends App {
     "--ckg-enable=E",
     "--ckg-output=Q"
   )
-  private val moduleName = topName("Cl1Top")
-  circt.stage.ChiselStage.emitSystemVerilogFile(
-    new cl1.Cl1Top {
-      override def desiredName: String = moduleName
-    },
-    args,
-    firtoolOptions
-  )
+  topKind("core") match {
+    case "core" =>
+      circt.stage.ChiselStage.emitSystemVerilogFile(
+        new cl1.Cl1Top {
+          override def desiredName: String = topName("Cl1Top")
+        },
+        args,
+        firtoolOptions
+      )
+    case "cache" =>
+      circt.stage.ChiselStage.emitSystemVerilogFile(
+        new cl1.Cl1CacheFormal {
+          override def desiredName: String = topName("Cl1CacheFormal")
+        },
+        args,
+        firtoolOptions
+      )
+    case other =>
+      throw new IllegalArgumentException(s"CL1_ELAB_TOP must be core or cache, got '$other'")
+  }
 }
   

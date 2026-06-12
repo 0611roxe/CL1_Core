@@ -59,7 +59,7 @@ class Cl1ICACHE extends Module {
         val AW    = 32
         val DW    = 32
         val ROWW  = log2Ceil(DW/8 * BANKS)
-        val IDXW  = FORMAL_CACHE_IDXW
+        val IDXW  = CACHE_IDXW
         val TAGW  = AW - IDXW - ROWW
     }
 

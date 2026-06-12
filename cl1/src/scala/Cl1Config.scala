@@ -86,7 +86,8 @@ object Cl1Config {
   val FORMAL_VERIF = Cl1BuildMode.bool("CL1_FORMAL_VERIF", false)
   val RISCV_FORMAL_ALTOPS = Cl1BuildMode.bool("CL1_RISCV_FORMAL_ALTOPS", false)
   val EXPOSE_CORE_BUS = Cl1BuildMode.bool("CL1_EXPOSE_CORE_BUS", !Cl1BuildMode.CACHE_MODE)
-  val FORMAL_CACHE_IDXW = Cl1BuildMode.int("CL1_FORMAL_CACHE_IDXW", 7)
+  val CACHE_IDXW = Cl1BuildMode.int("CL1_CACHE_IDXW", 7)
+  val FORMAL_CACHE_OBSERVE = Cl1BuildMode.bool("CL1_FORMAL_CACHE_OBSERVE", false)
 
   require(
     !(EXPOSE_CORE_BUS && (HAS_ICACHE || HAS_DCACHE)),

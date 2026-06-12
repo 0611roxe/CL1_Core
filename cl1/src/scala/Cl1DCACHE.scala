@@ -6,6 +6,24 @@ import utils._
 import chisel3.util.HasBlackBoxInline
 import cl1.Cl1Config._
 
+class DCacheWritebackFormalObserve extends Bundle {
+    val dirty_replace_valid = Bool()
+    val dirty_replace_addr = UInt(32.W)
+    val dirty_replace_way_dirty = Bool()
+
+    val read_req_valid = Bool()
+
+    val writeback_valid = Bool()
+    val writeback_ready = Bool()
+    val writeback_from_replace = Bool()
+    val writeback_from_clean = Bool()
+    val writeback_addr = UInt(32.W)
+    val writeback_mask = UInt(4.W)
+    val writeback_len = UInt(4.W)
+    val writeback_size = UInt(2.W)
+    val writeback_last = Bool()
+}
+
 class rf_ram(val WordDepth:Int = 256, val DW:Int = 1) extends Module {
     val io   = IO(new Bundle {
         val waddr   = Input(UInt(log2Ceil(WordDepth).W))
@@ -35,6 +53,7 @@ class Cl1DCACHE extends Module {
         val dxReq   = Flipped(Decoupled(new dxReq))
         val out     = new CacheBus
         val dcache_idle = Output(Bool())
+        val formalWriteback = if (FORMAL_CACHE_OBSERVE) Some(Output(new DCacheWritebackFormalObserve)) else None
     })
 
     object CacheParams {
@@ -43,7 +62,7 @@ class Cl1DCACHE extends Module {
         val AW    = 32
         val DW    = 32
         val ROWW  = log2Ceil(DW/8 * BANKS)
-        val IDXW  = FORMAL_CACHE_IDXW
+        val IDXW  = CACHE_IDXW
         val TAGW  = AW - IDXW - ROWW
     }
 
@@ -384,6 +403,8 @@ class Cl1DCACHE extends Module {
     io.in.rsp.bits.err   := (s_is_waitwrsp | s_is_refill) & io.out.rsp.bits.err
 
     val replace_way_tag = Mux1H(replace_way_r, tagv_srams.map(_.io.dout(CacheParams.TAGW-1,0)))
+    val dirty_replace_way_tag = Mux1H(replace_way, tagv_srams.map(_.io.dout(CacheParams.TAGW-1,0)))
+    val dirty_replace_addr = Cat(dirty_replace_way_tag, dc_idx_r, Fill(CacheParams.ROWW, false.B))
     val wburst_addr = Cat(replace_way_tag, dc_idx_r, Fill(CacheParams.ROWW, false.B))
     val rburst_addr = Cat(req_addr_reg(CacheParams.AW-1, CacheParams.ROWW), Fill(CacheParams.ROWW, false.B))
     val single_addr = req_addr_reg
@@ -420,12 +441,30 @@ class Cl1DCACHE extends Module {
         s_is_replace                  -> true.B,
         s_is_wr_dirtyline             -> bank_cnt_wrap
     ))
-
     io.out.rsp.ready        := true.B
 
     io.dxReq.ready := req_inval & inval_done | req_clean & clean_done
 
     io.dcache_idle          := s_is_idle & wb_is_idle
+
+    io.formalWriteback.foreach { f =>
+        val writeback_req = io.out.req.valid && io.out.req.bits.wen
+        f.dirty_replace_valid := s_is_lookup && cachemiss_needwb
+        f.dirty_replace_addr := dirty_replace_addr
+        f.dirty_replace_way_dirty := replace_way_dirty
+
+        f.read_req_valid := io.out.req.valid && !io.out.req.bits.wen
+
+        f.writeback_valid := writeback_req
+        f.writeback_ready := io.out.req.ready
+        f.writeback_from_replace := writeback_req && s_is_miss && burst_trans
+        f.writeback_from_clean := writeback_req && s_is_wr_dirtyline
+        f.writeback_addr := io.out.req.bits.addr
+        f.writeback_mask := io.out.req.bits.mask
+        f.writeback_len := io.out.req.bits.len
+        f.writeback_size := io.out.req.bits.size
+        f.writeback_last := io.out.req.bits.last
+    }
 
     val dcache_ck_en       = ~(s_is_idle & ~io.in.req.valid & ~io.dxReq.valid & wb_is_idle)
 

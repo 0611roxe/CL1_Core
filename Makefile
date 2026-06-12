@@ -10,6 +10,7 @@ DUMP_WAVE :=
 PWR_ANALYSIS :=1
 CL1_TEST_MODE ?= cache
 CL1_PLATFORM ?= simple_soc
+CL1_CACHE_IDXW ?= 7
 
 CONFIG_DBG = n
 CONFIG_NETSIM = n
@@ -72,7 +73,7 @@ WAVE      ?= gtkwave
 
 # Phony Targets
 .DEFAULT_GOAL := verilog
-.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache help reformat checkformat clean run
+.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache verilog-cache-formal help reformat checkformat clean run
 
 # Generate Verilog
 FIRTOOL_VERSION = 1.105.0
@@ -119,7 +120,10 @@ verilog-rvfi-axi:
 
 # RVFI with riscv-formal M-extension alternative ops, AXI exposed, minimal cache.
 verilog-rvfi-cache:
-	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false CL1_FORMAL_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SRAM_FOUNDARY=false CL1_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
+
+verilog-cache-formal:
+	$(call gen_verilog,CL1_ELAB_TOP=cache CL1_TOP_NAME=Cl1CacheFormal CL1_TEST_MODE=cache CL1_SRAM_FOUNDARY=false CL1_FORMAL_CACHE_OBSERVE=true CL1_CACHE_IDXW=$(CL1_CACHE_IDXW),Cl1CacheFormal)
 
 # Show Help for Elaborate
 help:
