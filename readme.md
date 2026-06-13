@@ -82,7 +82,7 @@ cl1_core/
 | `SOC_DIFF` | `false` | 是否导出 SoC 差分测试端口 `diff_o`；可通过 `CL1_SOC_DIFF` 覆盖，默认由 `fullSocTest` 派生。 |
 | `SramFoundary` | `true` in `bus`, `false` in `cache` | 是否使用工艺 SRAM 宏；由 `Cl1SynthesisConfig.syn` 派生。 |
 | `SOC_D64` | `false` | 顶层 AXI 数据位宽是否扩展为 64 位；仅在 `fullSocTest=true` 且未暴露 `CoreBus` 时生效。 |
-| `Technology` | `"CX55"` | SRAM 宏选择使用的工艺标识，`CX55`/`SMIC55` 共用 55nm memory，`SMIC100` 使用 SMIC100 memory。 |
+| `Technology` | `"CX55"` | SRAM 宏选择使用的工艺标识；`CX55` 使用 `SRAM_128X*_M8`，`SMIC55` 使用原 55nm memory，`SMIC100` 使用 SMIC100 memory。 |
 | `FORMAL_VERIF` | `true` | 开启形式验证相关逻辑，顶层会导出 `RVFI` 接口，MDU 也会切换到 formal 友好的结果生成方式。 |
 | `EXPOSE_CORE_BUS` | `true` in `bus`, `false` in `cache` | 顶层直接暴露 `ibus`/`dbus` 两个 `CoreBus` 接口；cache 模式导出 AXI4 `master` 接口，并接入 ICache/DCache/xbar/桥接逻辑。 |
 

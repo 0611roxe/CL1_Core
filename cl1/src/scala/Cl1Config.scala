@@ -73,6 +73,7 @@ object Cl1Technology {
     }
   }
 
+  def useCx55Memory(value: String): Boolean = normalize(value) == CX55
   def useSmic100Memory(value: String): Boolean = normalize(value) == SMIC100
 }
 

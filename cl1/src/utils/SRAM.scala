@@ -18,7 +18,13 @@ class sram(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false) e
 
     private val addrWidth = log2Ceil(WordDepth)
     private val useFoundryMacro = SramFoundary
+    private val useCx55Macro = Cl1Technology.useCx55Memory(Technology)
     private val useSmic100Macro = Cl1Technology.useSmic100Memory(Technology)
+
+    private def requireCx55Shape(): Unit = {
+        require(WordDepth == 128, s"CX55 SRAM M8 macro only supports WordDepth=128, got ${WordDepth}.")
+        require(addrWidth == 7, s"CX55 SRAM M8 macro expects 7 address bits, got ${addrWidth}.")
+    }
 
     private def connectMacro(mem: SMICSramBlackBoxBase): Unit = {
         mem.io.CLK := clock
@@ -26,6 +32,17 @@ class sram(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false) e
         mem.io.D := io.din
         mem.io.CEN := !io.ena
         mem.io.WEN := !(io.wea =/= 0.U)
+        io.dout := mem.io.Q
+    }
+
+    private def connectCx55Macro(mem: CX55SramBlackBoxBase): Unit = {
+        mem.io.CLK := clock
+        mem.io.A := io.addr
+        mem.io.D := io.din
+        mem.io.CEB := !io.ena
+        mem.io.GWEB := !(io.wea =/= 0.U)
+        mem.io.MARE := false.B
+        mem.io.MAR := 0.U
         io.dout := mem.io.Q
     }
 
@@ -47,12 +64,19 @@ class sram(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false) e
             io.dout := mem.read(io.addr, io.ena).asUInt
         } else {
             require(DW == 32, s"Byte-write SRAM macro only supports DW=32, got ${DW}.")
-            val mem =
-                if (useSmic100Macro) Module(new S011HD1P_X64Y2D32_BW(addrWidth, DW))
-                else Module(new S55NLLG1PH_X128Y1D32_BW(addrWidth, DW))
+            if (useCx55Macro) {
+                requireCx55Shape()
+                val mem = Module(new SRAM_128X32_M8_BW(addrWidth, DW))
+                connectCx55Macro(mem)
+                mem.io.WEB.foreach(_ := byteWriteMask)
+            } else {
+                val mem =
+                    if (useSmic100Macro) Module(new S011HD1P_X64Y2D32_BW(addrWidth, DW))
+                    else Module(new S55NLLG1PH_X128Y1D32_BW(addrWidth, DW))
 
-            connectMacro(mem)
-            mem.io.BWEN.foreach(_ := byteWriteMask)
+                connectMacro(mem)
+                mem.io.BWEN.foreach(_ := byteWriteMask)
+            }
         }
     } else {
         if(!useFoundryMacro) {
@@ -63,17 +87,51 @@ class sram(val WordDepth:Int = 256, val DW: Int = 32, val BE: Boolean = false) e
             io.dout := mem.read(io.addr, io.ena)
         } else {
             require(DW == 32 || DW == 22, s"SRAM macro only supports DW=32 or DW=22, got ${DW}.")
-            val mem = (DW, useSmic100Macro) match {
-                case (32, true)  => Module(new S011HD1P_X64Y2D32(addrWidth, DW))
-                case (32, false) => Module(new S55NLLG1PH_X128Y1D32(addrWidth, DW))
-                case (22, true)  => Module(new S011HD1P_X64Y2D22(addrWidth, DW))
-                case (22, false) => Module(new S55NLLG1PH_X128Y1D22(addrWidth, DW))
-                case _           => unsupportedMacroWidth
+            if (useCx55Macro) {
+                requireCx55Shape()
+                val mem = DW match {
+                    case 32 => Module(new SRAM_128X32_M8(addrWidth, DW))
+                    case 22 => Module(new SRAM_128X22_M8(addrWidth, DW))
+                    case _  => unsupportedMacroWidth
+                }
+                connectCx55Macro(mem)
+            } else {
+                val mem = (DW, useSmic100Macro) match {
+                    case (32, true)  => Module(new S011HD1P_X64Y2D32(addrWidth, DW))
+                    case (32, false) => Module(new S55NLLG1PH_X128Y1D32(addrWidth, DW))
+                    case (22, true)  => Module(new S011HD1P_X64Y2D22(addrWidth, DW))
+                    case (22, false) => Module(new S55NLLG1PH_X128Y1D22(addrWidth, DW))
+                    case _           => unsupportedMacroWidth
+                }
+                connectMacro(mem)
             }
-            connectMacro(mem)
         }
     }
 }
+
+class CX55SramIO(AW: Int = 7, DW: Int = 32, hasWEB: Boolean = false) extends Bundle {
+    val CLK     = Input(Clock())
+    val A       = Input(UInt(AW.W))
+    val D       = Input(UInt(DW.W))
+    val CEB     = Input(Bool())
+    val GWEB    = Input(Bool())
+    val WEB     = if (hasWEB) Some(Input(UInt(DW.W))) else None
+    val MARE    = Input(Bool())
+    val MAR     = Input(UInt(4.W))
+    val Q       = Output(UInt(DW.W))
+}
+
+abstract class CX55SramBlackBoxBase(name: String, AW: Int, DW: Int, hasWEB: Boolean = false) extends BlackBox {
+    val io = IO(new CX55SramIO(AW, DW, hasWEB))
+    override def desiredName: String = name
+}
+
+class SRAM_128X32_M8(AW: Int = 7, DW: Int = 32)
+    extends CX55SramBlackBoxBase("SRAM_128X32_M8", AW, DW, hasWEB = false)
+class SRAM_128X32_M8_BW(AW: Int = 7, DW: Int = 32)
+    extends CX55SramBlackBoxBase("SRAM_128X32_M8_BW", AW, DW, hasWEB = true)
+class SRAM_128X22_M8(AW: Int = 7, DW: Int = 22)
+    extends CX55SramBlackBoxBase("SRAM_128X22_M8", AW, DW, hasWEB = false)
 
 class SMICSramIO(AW: Int = 8, DW: Int = 31, hasBWEN: Boolean = false) extends Bundle {
     val CLK     = Input(Clock())
