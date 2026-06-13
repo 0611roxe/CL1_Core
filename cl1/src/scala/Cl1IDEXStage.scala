@@ -285,7 +285,7 @@ class Cl1IDEXStage extends Module with TrapCode {
   clean_dcache_done     := RegEnable(cleand_done_n, false.B, cleand_done_en)
 
   fencei_exec_done      := flush_icache_done & clean_dcache_done
-
+  val fencei_flush_pluse = fencei_exec_done & dx_valid & !dx_flush & !dxHasTrap & !dx_stall
 
   io.icache_req.valid   := icahce_flush_req
   io.icache_req.bits.invalid := dx_fencei
@@ -348,7 +348,7 @@ class Cl1IDEXStage extends Module with TrapCode {
   val uncondi_jump    = branch_jal | branch_jalr
   val condi_branch    = branch_beq | branch_bne | branch_bge | branch_bgeu | branch_blt | branch_bltu
   val is_branch       = uncondi_jump | condi_branch
-  val branch_mis_prdt = (branch_prdt_taken ^ branch_real_taken) & is_branch | fencei_exec
+  val branch_mis_prdt = (branch_prdt_taken ^ branch_real_taken) & is_branch
   val flush_pc        = Mux(branch_jalr & branch_real_taken, io.rs1Value, pc)
   val bjp_pc_ofst   = Mux1H(Seq(
     branch_jal   ->  Jimm,
@@ -363,7 +363,7 @@ class Cl1IDEXStage extends Module with TrapCode {
   dontTouch(branch_mis_prdt)
 
   brchmis_flush_pluse     := branch_mis_prdt & dx_valid & !dx_exec_done & !dx_flush & !dxHasTrap & !dx_stall
-  io.toifu.flush_req      := brchmis_flush_pluse
+  io.toifu.flush_req      := brchmis_flush_pluse | fencei_flush_pluse
   io.toifu.flush_pc       := flush_pc
   io.toifu.flush_pc_ofst  := flush_pc_ofst
   io.toifu.decmuldiv_info := ctrl.muldivOp
