@@ -151,6 +151,12 @@ object PlatformAddressMaps {
         dCacheable = true
       ),
       AddressRegion(
+        name = "i2s",
+        base = BigInt("10050000", 16),
+        size = BigInt("00001000", 16),
+        mmio = true
+      ),
+      AddressRegion(
         name = "timer",
         base = BigInt("10080000", 16),
         size = BigInt("00001000", 16),
@@ -171,7 +177,7 @@ object PlatformAddressMaps {
       AddressRegion(
         name = "sdram",
         base = BigInt("80000000", 16),
-        size = BigInt("20000000", 16),
+        size = BigInt("10000000", 16),
         iCacheable = true,
         dCacheable = true
       ),
