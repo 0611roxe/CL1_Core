@@ -121,7 +121,7 @@ class Cl1DCACHE extends Module {
                 (cachemiss_noneedwb     | uncache_rd)               -> s_replace
             ))
 
-            dc_st_n := Mux(req_inval, s_inval, Mux(req_clean, s_clean, dc_st_n_pre))
+            dc_st_n := Mux(req_inval | req_clean, s_clean, dc_st_n_pre)
         }
         is(s_miss) {
             dc_st_n := Mux(wr_last_trans, s_waitwrsp, s_miss)

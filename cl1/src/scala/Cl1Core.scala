@@ -106,6 +106,7 @@ class Cl1Core extends Module {
   csr.io.instr  := wbStage.io.inst
   csr.io.c_instr := wbStage.io.cInst
   csr.io.wrValue := wbStage.io.csrWdat
+  csr.io.wb_commit := wbStage.io.commit
 
   dm.io.dbg2csr <> csr.io.dbg_intf
 
