@@ -425,7 +425,7 @@ class Cl1DCACHE extends Module {
 
     io.out.rsp.ready        := true.B
 
-    io.dxReq.ready := req_inval & inval_done | req_clean & clean_done
+    io.dxReq.ready := req_inval & s_is_inval & inval_done | req_clean & clean_done
 
     io.dcache_idle          := s_is_idle & wb_is_idle
 
