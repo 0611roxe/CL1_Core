@@ -11,6 +11,7 @@ PWR_ANALYSIS :=1
 CL1_TEST_MODE ?= cache
 CL1_PLATFORM ?= simple_soc
 CL1_CACHE_IDXW ?= 7
+CL1_AXI_FORMAL_CACHE_IDXW ?= 1
 
 CONFIG_DBG = n
 CONFIG_NETSIM = n
@@ -73,7 +74,7 @@ WAVE      ?= gtkwave
 
 # Phony Targets
 .DEFAULT_GOAL := verilog
-.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-full-soc-syn verilog-full-soc-diff verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-cache verilog-cache-formal help reformat checkformat clean run
+.PHONY: all verilog verilog-sim verilog-full-cache-axi verilog-full-soc-syn verilog-full-soc-diff verilog-no-cache verilog-rvfi verilog-rvfi-axi verilog-rvfi-axi-cache verilog-rvfi-cache verilog-cache-formal help reformat checkformat clean run
 
 # Generate Verilog
 FIRTOOL_VERSION = 1.105.0
@@ -126,12 +127,16 @@ verilog-rvfi:
 verilog-rvfi-axi:
 	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_AXI CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=false CL1_HAS_DCACHE=false,Cl1Top_AXI)
 
+# RVFI with riscv-formal M-extension alternative ops, AXI exposed, I/D cache enabled.
+verilog-rvfi-axi-cache:
+	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_AXI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SYN=false CL1_CACHE_IDXW=$(CL1_AXI_FORMAL_CACHE_IDXW),Cl1Top_AXI_CACHE)
+
 # RVFI with riscv-formal M-extension alternative ops, AXI exposed, minimal cache.
 verilog-rvfi-cache:
 	$(call gen_verilog,CL1_TEST_MODE=cache CL1_TOP_NAME=Cl1Top_RVFI_CACHE CL1_FORMAL_VERIF=true CL1_RISCV_FORMAL_ALTOPS=true CL1_HAS_ICACHE=true CL1_HAS_DCACHE=true CL1_SYN=false CL1_CACHE_IDXW=1,Cl1Top_RVFI_CACHE)
 
 verilog-cache-formal:
-	$(call gen_verilog,CL1_ELAB_TOP=cache CL1_TOP_NAME=Cl1CacheFormal CL1_TEST_MODE=cache CL1_SYN=false CL1_FORMAL_CACHE_OBSERVE=true CL1_CACHE_IDXW=$(CL1_CACHE_IDXW),Cl1CacheFormal)
+	$(call gen_verilog,CL1_CACHE_FORMAL=true CL1_ELAB_TOP=cache CL1_TOP_NAME=Cl1CacheFormal CL1_TEST_MODE=cache CL1_SYN=false CL1_CACHE_IDXW=$(CL1_CACHE_IDXW),Cl1CacheFormal)
 
 # Show Help for Elaborate
 help:

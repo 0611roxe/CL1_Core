@@ -53,7 +53,7 @@ class Cl1DCACHE extends Module {
         val dxReq   = Flipped(Decoupled(new dxReq))
         val out     = new CacheBus
         val dcache_idle = Output(Bool())
-        val formalWriteback = if (FORMAL_CACHE_OBSERVE) Some(Output(new DCacheWritebackFormalObserve)) else None
+        val formalWriteback = if (CACHE_FORMAL) Some(Output(new DCacheWritebackFormalObserve)) else None
     })
 
     object CacheParams {
@@ -403,8 +403,6 @@ class Cl1DCACHE extends Module {
     io.in.rsp.bits.err   := (s_is_waitwrsp | s_is_refill) & io.out.rsp.bits.err
 
     val replace_way_tag = Mux1H(replace_way_r, tagv_srams.map(_.io.dout(CacheParams.TAGW-1,0)))
-    val dirty_replace_way_tag = Mux1H(replace_way, tagv_srams.map(_.io.dout(CacheParams.TAGW-1,0)))
-    val dirty_replace_addr = Cat(dirty_replace_way_tag, dc_idx_r, Fill(CacheParams.ROWW, false.B))
     val wburst_addr = Cat(replace_way_tag, dc_idx_r, Fill(CacheParams.ROWW, false.B))
     val rburst_addr = Cat(req_addr_reg(CacheParams.AW-1, CacheParams.ROWW), Fill(CacheParams.ROWW, false.B))
     val single_addr = req_addr_reg
@@ -450,6 +448,8 @@ class Cl1DCACHE extends Module {
     io.dcache_idle          := s_is_idle & wb_is_idle
 
     io.formalWriteback.foreach { f =>
+        val dirty_replace_way_tag = Mux1H(replace_way, tagv_srams.map(_.io.dout(CacheParams.TAGW-1,0)))
+        val dirty_replace_addr = Cat(dirty_replace_way_tag, dc_idx_r, Fill(CacheParams.ROWW, false.B))
         val writeback_req = io.out.req.valid && io.out.req.bits.wen
         f.dirty_replace_valid := s_is_lookup && cachemiss_needwb
         f.dirty_replace_addr := dirty_replace_addr

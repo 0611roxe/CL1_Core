@@ -41,6 +41,7 @@ object Elaborate extends App {
         firtoolOptions
       )
     case "cache" =>
+      require(cl1.Cl1Config.CACHE_FORMAL, "CL1_ELAB_TOP=cache requires CL1_CACHE_FORMAL=true")
       circt.stage.ChiselStage.emitSystemVerilogFile(
         new cl1.Cl1CacheFormal {
           override def desiredName: String = topName("Cl1CacheFormal")

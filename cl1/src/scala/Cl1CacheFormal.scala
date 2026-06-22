@@ -7,6 +7,8 @@ import chisel3.util._
 import cl1.Cl1Config._
 
 class Cl1CacheFormal extends Module {
+  require(CACHE_FORMAL, "Cl1CacheFormal requires CL1_CACHE_FORMAL=true")
+
   val io = IO(new Bundle {
     val icore = Flipped(new CoreBus)
     val dcore = Flipped(new CoreBus)
@@ -15,7 +17,7 @@ class Cl1CacheFormal extends Module {
     val master = new AXI4(BUS_WIDTH, BUS_WIDTH, 2)
     val icache_idle = Output(Bool())
     val dcache_idle = Output(Bool())
-    val dcacheWriteback = if (FORMAL_CACHE_OBSERVE) Some(Output(new DCacheWritebackFormalObserve)) else None
+    val dcacheWriteback = if (CACHE_FORMAL) Some(Output(new DCacheWritebackFormalObserve)) else None
   })
 
   val icache = Module(new Cl1ICACHE)

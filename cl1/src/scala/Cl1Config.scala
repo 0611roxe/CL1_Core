@@ -122,7 +122,7 @@ object Cl1VerificationConfig {
   val difftest     = DIFFTEST
   val FORMAL_VERIF = Cl1BuildMode.bool("CL1_FORMAL_VERIF", false)
   val RISCV_FORMAL_ALTOPS = Cl1BuildMode.bool("CL1_RISCV_FORMAL_ALTOPS", false)
-  val FORMAL_CACHE_OBSERVE = Cl1BuildMode.bool("CL1_FORMAL_CACHE_OBSERVE", false)
+  val CACHE_FORMAL = Cl1BuildMode.bool("CL1_CACHE_FORMAL", false)
 }
 
 // Low-power configuration: clock gates and reset-saving options.
@@ -158,7 +158,7 @@ object Cl1Config {
   val Technology = Cl1SynthesisConfig.Technology
   val FORMAL_VERIF = Cl1VerificationConfig.FORMAL_VERIF
   val RISCV_FORMAL_ALTOPS = Cl1VerificationConfig.RISCV_FORMAL_ALTOPS
+  val CACHE_FORMAL = Cl1VerificationConfig.CACHE_FORMAL
   val EXPOSE_CORE_BUS = Cl1ProcessorConfig.EXPOSE_CORE_BUS
   val CACHE_IDXW = Cl1ProcessorConfig.CACHE_IDXW
-  val FORMAL_CACHE_OBSERVE = Cl1VerificationConfig.FORMAL_CACHE_OBSERVE
 }
